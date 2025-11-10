@@ -1,0 +1,101 @@
+﻿services:
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: thesis_fintech
+      DB_USER: thesis_admin
+      DB_PASSWORD: thesis_admin
+      DB_POOL_MIN_SIZE: 1
+      DB_POOL_MAX_SIZE: 10
+      DB_POOL_TIMEOUT: 30
+      OIDC_ENABLED: "true"
+      OIDC_ISSUER: http://localhost:8080/realms/thesis
+      OIDC_CLIENT_ID: frontend
+     # OIDC_AUDIENCE: backend
+      OIDC_JWKS_URL: http://keycloak:8080/realms/thesis/protocol/openid-connect/certs
+      OIDC_USER_ID_CLAIM: user_id
+      OIDC_JWKS_CACHE_TTL_SECONDS: 300
+      OIDC_CLOCK_SKEW_SECONDS: 60
+      OTP_SERVICE_BASE_URL: http://otp:9000
+      OTP_SERVICE_TIMEOUT_SECONDS: 5
+      OTP_CODE_TTL_SECONDS: 60
+    volumes:
+      - ../backend:/app/backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      otp:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.4
+    command:
+      - start-dev
+      - --http-port=8080
+      - --import-realm
+    environment:
+      KC_HOSTNAME_URL: http://localhost:8080
+      KEYCLOAK_ADMIN: ${KC_ADMIN_USER-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD-admin}
+      KC_HTTP_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realms:/opt/keycloak/data/import
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  otp:
+    build:
+      context: ..
+      dockerfile: otp_service/Dockerfile
+    environment:
+      OTP_EMAIL_FROM: ${OTP_EMAIL_FROM-no-reply@localhost.localdomain}
+      OTP_SMTP_HOST: ${OTP_SMTP_HOST-mailpit}
+      OTP_SMTP_PORT: ${OTP_SMTP_PORT-1025}
+      OTP_SMTP_USERNAME: ${OTP_SMTP_USERNAME-}
+      OTP_SMTP_PASSWORD: ${OTP_SMTP_PASSWORD-}
+      OTP_SMTP_USE_TLS: ${OTP_SMTP_USE_TLS-false}
+      OTP_SMTP_USE_SSL: ${OTP_SMTP_USE_SSL-false}
+      OTP_SMS_LOG_FILE: ${OTP_SMS_LOG_FILE-}
+      OTP_SMS_SENDER_ID: ${OTP_SMS_SENDER_ID-Fintech}
+    ports:
+      - "9000:9000"
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025" #SMTP
+      - "8025:8025" #interfaccia web
+  postgres:
+    container_name: thesis_fintech_db
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: thesis_fintech
+      POSTGRES_USER: thesis_admin
+      POSTGRES_PASSWORD: thesis_admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thesis_admin -d thesis_fintech"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  postgres_data:
+
+

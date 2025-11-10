@@ -1,0 +1,20 @@
+# Standard Guidelines
+
+## Commit Guidelines
+- Formato: `[<SCOPE> - <ACTION>] - <descrizione sintetica>`.
+- `SCOPE` ammessi: `BE` (backend), `FE` (frontend), `IN` (infrastruttura).
+- `ACTION` ammessi: `Add`, `Fix`, `Update`, `Delete`.
+- Tenere la descrizione breve (italiano o inglese); usare il body del commit per dettagli aggiuntivi.
+- Esempi: `[BE - Add] - implementati endpoint accounts`, `[FE - Fix] - corretto filtraggio transazioni`.
+- Separare in piu' commit i cambi logici distinti; scegliere lo scope piu' pertinente se inevitabile accorpare.
+
+## Database Guidelines
+- Nei file `.merm` riportare vincoli come `UNIQUE`, `CHECK`, `INDEX` subito dopo la definizione della tabella, in blocchi separati dall'elenco degli attributi.
+- Creare un file per ogni tabella con schema `backend/db/migrations/<nome_tabella>_migration_ddmmyyyy.sql`, includendo `CREATE TABLE`, relazioni e vincoli del relativo oggetto.
+- Ogni tabella deve avere un file seed dedicato denominato `backend/db/seeds/<nome_tabella>_seed.py`, responsabile dell'inserimento dati iniziali/idempotenti.
+
+## UML Guidelines
+- I nomi delle entita' non devono contenere spazi; sostituirli con `_` quando serve.
+
+## Commenti e Docstring
+- Inserire per ogni funzione o metodo definito una docstring in italiano che descriva chiaramente lo scopo della funzione, i parametri di input e il valore di ritorno.

@@ -1,0 +1,70 @@
+erDiagram
+    USER {
+        id UUID PK
+        email VARCHAR 
+        nome VARCHAR 
+        cognome VARCHAR 
+        birthday DATE 
+        preferred_otp_channel UUID FK 
+        created_at TIMESTAMP 
+    }
+
+    ACCOUNT {
+        id UUID PK
+        user_id UUID FK
+        currency TEXT 
+        balance NUMERIC 
+        name TEXT 
+        created_at TIMESTAMP 
+    }
+
+    TRANSACTION {
+        id UUID PK
+        user_id UUID FK
+        account_id UUID FK
+        amount NUMERIC 
+        currency TEXT 
+        category TEXT 
+        idem_key TEXT 
+        direction TEXT 
+        created_at TIMESTAMP 
+    }
+
+    OTPAUDIT {
+        id UUID PK
+        user_id UUID FK
+        otp_channel UUID FK 
+        status TEXT 
+        attempted_at TIMESTAMP 
+    }
+
+    SECURITYLOG {
+        id UUID PK
+        user_id UUID FK optional
+        event_type TEXT 
+        metadata JSONB 
+        logged_at TIMESTAMP 
+    }
+
+    OTP_CHANNEL {
+        id UUID PK
+        code TEXT 
+        description TEXT 
+        is_active BOOLEAN 
+        created_at TIMESTAMP 
+    }
+
+    %% TRANSACTION Constraints
+    %% UNIQUE (idem_key)
+
+    %% OTP_CHANNEL Constraints
+    %% UNIQUE (code)
+
+    USER ||--o{ ACCOUNT : possiede
+    USER ||--o{ TRANSACTION : "origina"
+    ACCOUNT ||--o{ TRANSACTION : registra
+    USER ||--o{ OTPAUDIT : richiede
+    USER ||--o{ SECURITYLOG : genera
+    TRANSACTION }o--|| SECURITYLOG : "produce evento"
+    USER }o--|| OTP_CHANNEL : preferisce
+    OTP_CHANNEL ||--o{ OTPAUDIT : "utilizza"

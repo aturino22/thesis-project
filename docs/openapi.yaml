@@ -1,0 +1,436 @@
+openapi: 3.1.0
+info:
+  title: Fintech Wallet API (MVP)
+  version: 0.1.0
+  description: >
+    Bozza iniziale per le API del wallet fintech di tesi. Aggiornare con descrizioni
+    puntuali, termini del servizio e contatti una volta definiti.
+servers:
+  - url: http://localhost:8000
+    description: Ambiente di sviluppo locale
+  - url: https://api.dev.example.com
+    description: Ambiente DEV (placeholder)
+tags:
+  - name: Auth
+    description: Endpoint legati all'autenticazione e gestione token.
+  - name: Accounts
+    description: Consultazione dei conti dell'utente autenticato.
+  - name: Transactions
+    description: Gestione e consultazione delle transazioni.
+paths:
+  /auth/token:
+    post:
+      tags: [Auth]
+      summary: Scambia il codice PKCE per un access token
+      description: >
+        Endpoint placeholder: definire integration con IdP (Keycloak) o endpoint proxy.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '200':
+          description: Access token ottenuto con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Richiesta non valida (parametri mancanti o errati)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /accounts:
+    get:
+      tags: [Accounts]
+      summary: Elenca i conti associati all'utente autenticato
+      security:
+        - oauth2: [transactions:read]
+      responses:
+        '200':
+          description: Lista dei conti dell'utente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Account'
+        '401':
+          description: Token mancante o non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Permessi insufficienti
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transactions:
+
+    get:
+      tags: [Transactions]
+      summary: Restituisce le transazioni filtrabili dell'utente
+      security:
+        - oauth2: [transactions:read]
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Data di inizio filtro (inclusiva)
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Data di fine filtro (inclusiva)
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Categoria transazione da filtrare
+      responses:
+        '200':
+          description: Lista transazioni
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+        '401':
+          description: Token mancante o non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Permessi insufficienti
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags: [Transactions]
+      summary: Crea una nuova transazione simulata
+      security:
+        - oauth2: [transactions:write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionCreate'
+      responses:
+        '201':
+          description: Transazione creata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Richiesta non valida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token mancante o non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Permessi insufficienti
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Idempotency key già utilizzata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /otp/send:
+    post:
+      tags: [OTP]
+      summary: Invia un codice OTP sul canale specificato
+      description: Genera una OTP temporanea e la invia via email o SMS simulato.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpSendRequest'
+      responses:
+        '202':
+          description: OTP inviata correttamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpSendResponse'
+        '400':
+          description: Parametri non validi (es. destinazione mancante)
+        '502':
+          description: Errore nel microservizio OTP
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: >
+        Schema placeholder per integrazione OIDC/PKCE (Keycloak). Aggiornare URLs
+        di autorizzazione e token.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://idp.example.com/realms/thesis/protocol/openid-connect/auth
+          tokenUrl: https://idp.example.com/realms/thesis/protocol/openid-connect/token
+          scopes:
+            transactions:read: Lettura conti e transazioni
+            transactions:write: Creazione transazioni
+  schemas:
+    TokenRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+          enum: [authorization_code]
+        code:
+          type: string
+        redirect_uri:
+          type: string
+          format: uri
+        client_id:
+          type: string
+        code_verifier:
+          type: string
+      required:
+        - grant_type
+        - code
+        - redirect_uri
+        - client_id
+        - code_verifier
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          format: int32
+        scope:
+          type: string
+      required:
+        - access_token
+        - token_type
+        - expires_in
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        balance:
+          type: number
+          multipleOf: 0.01
+        name:
+          type: string
+          maxLength: 120
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user_id
+        - currency
+        - balance
+        - name
+        - created_at
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          multipleOf: 0.01
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        category:
+          type: string
+          nullable: true
+          maxLength: 100
+        idem_key:
+          type: string
+          minLength: 1
+        direction:
+          type: string
+          enum: [buy, sell]
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user_id
+        - account_id
+        - amount
+        - currency
+        - idem_key
+        - direction
+        - created_at
+    TransactionCreate:
+      type: object
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          multipleOf: 0.01
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        category:
+          type: string
+          nullable: true
+          maxLength: 100
+        direction:
+          type: string
+          enum: [buy, sell]
+        idem_key:
+          type: string
+          minLength: 1
+      required:
+        - account_id
+        - amount
+        - currency
+        - direction
+        - idem_key
+    OtpChannel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - code
+        - is_active
+        - created_at
+    OtpAudit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        otp_channel:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [success, failed, blocked]
+        attempted_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user_id
+        - otp_channel
+        - status
+        - attempted_at
+    OtpSendRequest:
+      type: object
+      properties:
+        channel_code:
+          type: string
+          description: Codice del canale OTP (EMAIL o SMS).
+        destination:
+          type: string
+          description: Destinazione alternativa (email o numero).
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          description: Metadati opzionali trasmessi al servizio OTP.
+      additionalProperties: false
+    OtpSendResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: sent
+        channel_code:
+          type: string
+          description: Canale usato per l'invio.
+        expires_at:
+          type: string
+          format: date-time
+          description: Scadenza della OTP.
+      required: [status, channel_code, expires_at]
+    ErrorResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+          example: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        trace_id:
+          type: string
+          example: 7f3d2e21-a9f3-4d8b-b4a8-1234567890ab
+      required:
+        - title
+        - status
