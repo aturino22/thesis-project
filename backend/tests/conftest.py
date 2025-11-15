@@ -7,7 +7,7 @@ import json
 import os
 import sys
 from collections.abc import AsyncIterator, Iterator
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -96,7 +96,7 @@ def auth_headers_factory(oidc_test_keys: dict[str, Any]) -> Callable[..., dict[s
         scopes: Iterable[str] | None = None,
         extra_claims: dict[str, Any] | None = None,
     ) -> dict[str, str]:
-        issuance = datetime.utcnow()
+        issuance = datetime.now(timezone.utc)
         scope_set = {scope for scope in (scopes or DEFAULT_TEST_SCOPES)}
         payload: dict[str, Any] = {
             "iss": oidc_test_keys["issuer"],
