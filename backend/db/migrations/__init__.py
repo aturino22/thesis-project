@@ -20,6 +20,7 @@ MIGRATION_FILES: List[Path] = [
     MIGRATIONS_DIR / "otp_audits_rls_migration_25102025.sql",
     MIGRATIONS_DIR / "security_logs_migration_21102025.sql",
     MIGRATIONS_DIR / "security_logs_rls_migration_25102025.sql",
+    MIGRATIONS_DIR / "crypto_market_migration_11112025.sql",
 ]
 
 __all__ = ["MIGRATION_FILES", "MIGRATIONS_DIR"]
