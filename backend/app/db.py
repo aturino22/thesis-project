@@ -121,6 +121,21 @@ async def lifespan_pool(settings: Settings) -> AsyncIterator[AsyncConnectionPool
 
 
 
+async def get_connection(request: Request) -> AsyncIterator[AsyncConnection]:
+    """
+    Fornisce una connessione proveniente dal pool senza configurazioni aggiuntive.
+
+    Argomenti:
+        request: Oggetto FastAPI che contiene il riferimento al pool.
+
+    Restituisce:
+        AsyncConnection: Connessione grezza utile a task di sistema o contesti privi di RLS.
+    """
+    pool: AsyncConnectionPool = request.app.state.db_pool
+    async with pool.connection() as connection:
+        yield connection
+
+
 async def get_connection_with_rls(
     request: Request,
     user: AuthenticatedUser = Depends(get_authenticated_user),

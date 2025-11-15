@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     otp_service_timeout_seconds: float = 5.0
     otp_code_ttl_seconds: int = 60
     cors_allowed_origins: str = "http://localhost:5173"
+    coincap_base_url: str = "https://api.coincap.io/v2"
+    coincap_api_key: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env"),

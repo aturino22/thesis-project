@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -9,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from psycopg import AsyncConnection
 
 from ..dependencies import AuthenticatedUser, require_scope
-from ..db import get_connection_with_rls
+from ..db import get_connection, get_connection_with_rls
 from ..schemas import (
     AccountOut,
     CryptoOrderRequest,
@@ -17,7 +18,7 @@ from ..schemas import (
     CryptoPositionOut,
     TransactionOut,
 )
-from ..services import coingecko
+from ..services import coincap
 
 
 router = APIRouter(prefix="/market", tags=["Market"])
@@ -121,13 +122,101 @@ def _to_position_out(record: dict[str, object]) -> CryptoPositionOut:
     )
 
 
+async def _load_crypto_symbol_map(conn: AsyncConnection, symbols: set[str]) -> dict[str, str]:
+    if not symbols:
+        return {}
+    async with conn.cursor() as cur:
+        await cur.execute(
+            "SELECT id, UPPER(symbol) AS symbol FROM crypto WHERE UPPER(symbol) = ANY(%s);",
+            (list(symbols),),
+        )
+        rows = await cur.fetchall()
+    return {row["symbol"]: row["id"] for row in rows}
+
+
+async def _fetch_crypto_metadata(conn: AsyncConnection, crypto_id: str) -> dict[str, object] | None:
+    async with conn.cursor() as cur:
+        await cur.execute(
+            """
+            SELECT id, symbol, name, explorer_url
+            FROM crypto
+            WHERE id = %s
+            """,
+            (crypto_id,),
+        )
+        row = await cur.fetchone()
+    return dict(row) if row else None
+
+
+async def _load_variation_history(
+    conn: AsyncConnection,
+    crypto_id: str,
+    window: timedelta,
+) -> list[dict[str, object]]:
+    if window <= timedelta(0):
+        window = timedelta(days=1)
+    async with conn.cursor() as cur:
+        await cur.execute(
+            """
+            SELECT
+                (EXTRACT(EPOCH FROM created_at) * 1000)::BIGINT AS ts_ms,
+                price
+            FROM crypto_variation
+            WHERE crypto_id = %s
+              AND created_at >= NOW() - %s
+            ORDER BY created_at ASC
+            """,
+            (crypto_id, window),
+        )
+        rows = await cur.fetchall()
+    return [
+        {
+            "timestamp": int(row["ts_ms"]),
+            "price": float(row["price"]),
+        }
+        for row in rows
+    ]
+
+
+async def _refresh_price_snapshots(conn: AsyncConnection, symbols: list[str]) -> dict[str, Decimal]:
+    upper_symbols = {symbol.upper() for symbol in symbols if symbol}
+    if not upper_symbols:
+        return {}
+
+    symbol_map = await _load_crypto_symbol_map(conn, upper_symbols)
+    recorded: dict[str, Decimal] = {}
+    inserted = False
+    async with conn.cursor() as cur:
+        for symbol in upper_symbols:
+            crypto_id = symbol_map.get(symbol)
+            if not crypto_id:
+                continue
+            price = await coincap.fetch_price_by_symbol(symbol)
+            recorded[symbol] = price
+            await cur.execute(
+                "INSERT INTO crypto_variation (crypto_id, price) VALUES (%s, %s);",
+                (crypto_id, price),
+            )
+            inserted = True
+    if inserted:
+        await conn.commit()
+    return recorded
+
+
 @router.get(
     "/prices",
     status_code=status.HTTP_200_OK,
 )
-async def list_market_prices() -> dict:
+async def list_market_prices(
+    conn: AsyncConnection = Depends(get_connection),
+) -> dict:
     """Restituisce i prezzi correnti delle crypto supportate."""
-    data = await coingecko.fetch_market_snapshot()
+    data = await coincap.fetch_market_snapshot()
+    price_snapshots = await _refresh_price_snapshots(conn, [item["symbol"] for item in data])
+    for entry in data:
+        symbol = entry["symbol"].upper()
+        if symbol in price_snapshots:
+            entry["price"] = float(price_snapshots[symbol])
     return {"data": data}
 
 
@@ -142,16 +231,22 @@ async def get_market_asset(
     user: AuthenticatedUser = Depends(require_scope("accounts:read")),
 ) -> dict:
     """Dettaglio di una crypto: prezzo attuale, storico, posizioni e transazioni utente."""
-    asset_id = coingecko.normalize_asset_identifier(asset_identifier.lower())
+    asset_id = coincap.normalize_asset_identifier(asset_identifier.lower())
     if not asset_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset non supportato.")
 
-    market_snapshot = await coingecko.fetch_market_snapshot()
+    market_snapshot = await coincap.fetch_market_snapshot()
     asset = next((item for item in market_snapshot if item["id"] == asset_id), None)
     if asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset non disponibile.")
 
-    history = await coingecko.fetch_history(asset_id, days=days)
+    metadata = await _fetch_crypto_metadata(conn, asset_id)
+    asset["explorer_url"] = metadata.get("explorer_url") if metadata else None
+
+    history_window = timedelta(days=days)
+    history = await _load_variation_history(conn, asset_id, history_window)
+    if not history:
+        history = await coincap.fetch_history(asset_id, days=days)
     symbol = asset["symbol"]
     position_row = await _fetch_position(conn, user.user_id, symbol)
     transactions_rows = await _fetch_transactions(conn, user.user_id, symbol)
