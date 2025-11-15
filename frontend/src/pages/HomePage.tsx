@@ -17,8 +17,7 @@ import {
   Typography,
 } from '@mui/material'
 import Grid from '@mui/material/GridLegacy'
-import RocketLaunchRoundedIcon from '@mui/icons-material/RocketLaunchRounded'
-import PolicyRoundedIcon from '@mui/icons-material/PolicyRounded'
+import { FaRocket, FaShieldAlt } from 'react-icons/fa'
 import { useAuth } from 'react-oidc-context'
 import { appConfig } from '@/config/appConfig'
 import {
@@ -212,14 +211,14 @@ export function HomePage() {
                 alignItems={{ xs: 'flex-start', sm: 'center' }}
               >
                 <Chip
-                  icon={<RocketLaunchRoundedIcon fontSize="small" />}
+                  icon={<FaRocket size={14} />}
                   label="Wallet digitale evoluto"
                   variant="outlined"
                   sx={{
                     fontWeight: 700,
                     px: 0.5,
                     borderColor: 'rgba(0, 200, 83, 0.6)',
-                    color: '#00C853',
+                    color: '#1ED760',
                     backgroundColor: 'rgba(0, 0, 0, 0.6)',
                   }}
                 />
@@ -269,7 +268,7 @@ export function HomePage() {
                 }}
               >
                 Piattaforma di digital banking che ti permette di{' '}
-                <Box component="span" sx={{ color: '#00C853', fontWeight: 700 }}>
+                <Box component="span" sx={{ color: '#1ED760', fontWeight: 700 }}>
                   muovere capitali, investire e pagare
                 </Box>{' '}
                 con una sola app: controlli biometrici, alert istantanei e gestione multi-valuta
@@ -283,7 +282,7 @@ export function HomePage() {
                 color="warning"
                 variant="outlined"
                 size="small"
-                icon={<PolicyRoundedIcon fontSize="small" />}
+                icon={<FaShieldAlt size={14} />}
                 sx={{ fontWeight: 600 }}
               />
             ) : null}
@@ -310,7 +309,7 @@ export function HomePage() {
                   <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Stack spacing={0.25}>
-                        <Typography variant="overline" sx={{ color: '#00C853', letterSpacing: 1 }}>
+                        <Typography variant="overline" sx={{ color: '#1ED760', letterSpacing: 1 }}>
                           Crypto portfolio
                         </Typography>
                         <Typography variant="h5" component="h3">
@@ -322,7 +321,7 @@ export function HomePage() {
                         color="success"
                         variant="outlined"
                         size="small"
-                        sx={{ fontWeight: 600, borderColor: 'rgba(0, 200, 83, 0.4)', color: '#00C853' }}
+                        sx={{ fontWeight: 600, borderColor: 'rgba(0, 200, 83, 0.4)', color: '#1ED760' }}
                       />
                     </Stack>
                     <Typography variant="h4" fontWeight={700}>
@@ -390,7 +389,7 @@ export function HomePage() {
                                       <Typography
                                         variant="caption"
                                         sx={{
-                                          color: asset.change24hPercent >= 0 ? '#00C853' : '#FF6161',
+                                          color: asset.change24hPercent >= 0 ? '#1ED760' : '#FF4D6D',
                                           fontWeight: 600,
                                         }}
                                       >
@@ -415,7 +414,7 @@ export function HomePage() {
                                   <Box
                                     sx={{
                                       width: `${share}%`,
-                                      background: 'linear-gradient(90deg, #F1C40F, #00C853)',
+                                      background: 'linear-gradient(90deg, #F1C40F, #1ED760)',
                                       height: '100%',
                                     }}
                                   />
@@ -479,7 +478,7 @@ export function HomePage() {
                           <polyline
                             points={chartPath}
                             fill="none"
-                            stroke="#00C853"
+                            stroke="#1ED760"
                             strokeWidth="2"
                             strokeLinejoin="round"
                             strokeLinecap="round"
@@ -669,11 +668,11 @@ export function HomePage() {
                                     fontWeight={600}
                                     color={
                                       transaction.direction === 'sell'
-                                        ? 'error.main'
-                                        : 'success.main'
+                                        ? 'success.main'
+                                        : 'error.main'
                                     }
                                   >
-                                    {transaction.direction === 'sell' ? '-' : '+'}
+                                    {transaction.direction === 'sell' ? '+' : '-'}
                                     {formatCurrency(transaction.amount, transaction.currency)}
                                   </Typography>
                                   <Typography variant="caption" color="text.secondary">
@@ -727,3 +726,6 @@ export function HomePage() {
     </Box>
   )
 }
+
+
+

@@ -15,10 +15,7 @@ import {
   Typography,
 } from '@mui/material'
 import Grid from '@mui/material/GridLegacy'
-import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded'
-import EditRoundedIcon from '@mui/icons-material/EditRounded'
-import LockResetRoundedIcon from '@mui/icons-material/LockResetRounded'
-import TaskAltRoundedIcon from '@mui/icons-material/TaskAltRounded'
+import { FaCheckCircle, FaEdit, FaSignOutAlt, FaUnlockAlt } from 'react-icons/fa'
 import { useAuth } from 'react-oidc-context'
 import { appConfig } from '@/config/appConfig'
 
@@ -190,13 +187,13 @@ export function ProfilePage() {
                   </Stack>
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'flex-end', px: 3, pb: 3 }}>
-                  <Button variant="outlined" startIcon={<EditRoundedIcon />} disabled>
+                  <Button variant="outlined" startIcon={<FaEdit />} disabled>
                     Modifica profilo
                   </Button>
                   <Button
                     variant="contained"
                     color="error"
-                    startIcon={<LogoutRoundedIcon />}
+                    startIcon={<FaSignOutAlt />}
                     onClick={handleLogout}
                   >
                     Esci
@@ -218,13 +215,7 @@ export function ProfilePage() {
                       </Typography>
                     </Stack>
                     {passwordSuccess ? (
-                      <Chip
-                        size="small"
-                        color="success"
-                        icon={<TaskAltRoundedIcon />}
-                        label="Aggiornata"
-                        sx={{ fontWeight: 600 }}
-                      />
+                      <Chip size="small" color="success" icon={<FaCheckCircle />} label="Aggiornata" sx={{ fontWeight: 600 }} />
                     ) : null}
                   </Stack>
 
@@ -277,7 +268,7 @@ export function ProfilePage() {
                 <CardActions sx={{ justifyContent: 'flex-end', px: 3, pb: 3 }}>
                   <Button
                     variant="contained"
-                    startIcon={<LockResetRoundedIcon />}
+                    startIcon={<FaUnlockAlt />}
                     onClick={handlePasswordChange}
                     disabled={passwordSubmitting}
                   >
@@ -292,3 +283,6 @@ export function ProfilePage() {
     </Box>
   )
 }
+
+
+

@@ -11,8 +11,7 @@ import {
   Typography,
 } from '@mui/material'
 import Grid from '@mui/material/GridLegacy'
-import RocketLaunchRoundedIcon from '@mui/icons-material/RocketLaunchRounded'
-import LoginRoundedIcon from '@mui/icons-material/LoginRounded'
+import { FaRocket, FaSignInAlt } from 'react-icons/fa'
 import { appConfig } from '@/config/appConfig'
 
 const experienceTags = ['Bonifici in tempo reale', 'Carte virtuali tokenizzate', 'Investimenti globali']
@@ -32,7 +31,7 @@ const showcaseHighlights: ShowcaseHighlight[] = [
       "Gestisci conti internazionali, limiti personalizzati e notifiche istantanee in tempo reale da un'unica dashboard.",
     image: 'https://images.unsplash.com/photo-1518186285589-2f7649de83e0?auto=format&fit=crop&w=1000&q=80',
     alt: 'Anteprima mobile di un portafoglio digitale',
-    accent: '#00C853',
+    accent: '#1ED760',
   },
   {
     title: 'Trading e risparmio smart',
@@ -79,14 +78,14 @@ export function PublicHomePage({
                 alignItems={{ xs: 'flex-start', sm: 'center' }}
               >
                 <Chip
-                  icon={<RocketLaunchRoundedIcon fontSize="small" />}
+                  icon={<FaRocket size={14} />}
                   label="Wallet digitale evoluto"
                   variant="outlined"
                   sx={{
                     fontWeight: 700,
                     px: 0.5,
                     borderColor: 'rgba(0, 200, 83, 0.6)',
-                    color: '#00C853',
+                    color: '#1ED760',
                     backgroundColor: 'rgba(0, 0, 0, 0.6)',
                   }}
                 />
@@ -110,7 +109,7 @@ export function PublicHomePage({
                 }}
               >
                 Piattaforma di digital banking che ti permette di{' '}
-                <Box component="span" sx={{ color: '#00C853', fontWeight: 700 }}>
+                <Box component="span" sx={{ color: '#1ED760', fontWeight: 700 }}>
                   muovere capitali, investire e pagare
                 </Box>{' '}
                 con una sola app: controlli biometrici, alert istantanei e gestione multi-valuta pensata per utenti
@@ -122,11 +121,11 @@ export function PublicHomePage({
               <Button
                 variant="contained"
                 size="large"
-                startIcon={<LoginRoundedIcon />}
+                startIcon={<FaSignInAlt />}
                 onClick={onLogin}
                 disabled={authenticating}
                 sx={{
-                  backgroundColor: '#00C853',
+                  backgroundColor: '#1ED760',
                   color: '#041704',
                   fontWeight: 700,
                   px: 3,
@@ -150,7 +149,7 @@ export function PublicHomePage({
           <Box
             sx={{
               borderRadius: 5,
-              background: 'linear-gradient(135deg, #020202 0%, #041704 50%, #00C853 100%)',
+              background: 'linear-gradient(135deg, #020202 0%, #041704 50%, #1ED760 100%)',
               color: '#F4FFE3',
               px: { xs: 3, md: 6 },
               py: { xs: 4, md: 6 },
@@ -275,3 +274,6 @@ export function PublicHomePage({
     </Box>
   )
 }
+
+
+

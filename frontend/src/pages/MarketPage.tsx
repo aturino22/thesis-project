@@ -2,6 +2,7 @@ import { useMemo, useState, type MouseEventHandler } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Card,
@@ -33,6 +34,7 @@ import {
   useMarketPricesQuery,
   type MarketAsset,
 } from '@/api/hooks'
+import { FaArrowLeft, FaCaretDown, FaCaretUp, FaEllipsisH, FaEuroSign } from 'react-icons/fa'
 
 const formatPrice = (value: number) =>
   new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value)
@@ -120,7 +122,7 @@ export function MarketPage() {
     <Box component="section" sx={{ bgcolor: '#000000', py: { xs: 4, md: 6 } }}>
       <Container maxWidth="lg">
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12}>
             <Card
               sx={{
                 borderRadius: 3,
@@ -128,7 +130,7 @@ export function MarketPage() {
                 border: '1px solid rgba(0, 200, 83, 0.25)',
               }}
             >
-              <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <Stack spacing={1}>
                   <Typography variant="overline" color="text.secondary">
                     Navigazione
@@ -141,33 +143,22 @@ export function MarketPage() {
                   </Typography>
                 </Stack>
                 <Divider />
-                <Chip
-                  label={marketQuery.isLoading ? 'Caricamento asset...' : `${assets.length} asset disponibili`}
-                  variant="outlined"
-                  color="success"
-                  sx={{ alignSelf: 'flex-start' }}
-                />
-                <Typography variant="body2" color="text.secondary">
-                  I prezzi arrivano in tempo reale da CoinGecko e ogni operazione aggiorna saldo e portafoglio crypto.
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Card
-              sx={{
-                borderRadius: 3,
-                backgroundColor: 'background.paper',
-                border: '1px solid rgba(0, 200, 83, 0.25)',
-              }}
-            >
-              <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Stack spacing={1}>
+                  <Chip
+                    label={marketQuery.isLoading ? 'Caricamento asset...' : `${assets.length} asset disponibili`}
+                    variant="outlined"
+                    color="success"
+                    sx={{ alignSelf: 'flex-start' }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    I prezzi arrivano in tempo reale da CoinCap e ogni operazione aggiorna saldo e portafoglio crypto.
+                  </Typography>
+                </Stack>
+                <Divider />
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Typography variant="h5">Criptovalute disponibili</Typography>
                   <Chip label={`${assets.length} asset`} color="primary" size="small" />
                 </Stack>
-                <Divider />
                 {marketQuery.isLoading ? (
                   <Stack spacing={1.25}>
                     {Array.from({ length: 5 }).map((_, index) => (
@@ -179,63 +170,84 @@ export function MarketPage() {
                     {marketQuery.error?.message ?? 'Impossibile caricare i prezzi delle crypto.'}
                   </Alert>
                 ) : (
-                  <List disablePadding>
-                    {assets.map((asset, index) => (
-                      <ListItem
+                  <Stack spacing={1.5}>
+                    {assets.map((asset) => (
+                      <Button
                         key={asset.id}
-                        disableGutters
+                        component={RouterLink}
+                        to={`/market/${asset.id}`}
                         sx={{
-                          py: 1.25,
-                          borderBottom:
-                            index === assets.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                          p: 0,
+                          justifyContent: 'flex-start',
+                          borderRadius: 3,
+                          textTransform: 'none',
+                          color: 'inherit',
+                          bgcolor: 'rgba(20,12,20,0.6)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          transition: 'transform 0.2s ease, border-color 0.2s ease',
+                          '&:hover': {
+                            borderColor: 'rgba(241,196,15,0.8)',
+                            transform: 'translateY(-2px)',
+                          },
                         }}
                       >
-                        <ListItemText
-                          primary={
-                            <Stack
-                              direction="row"
-                              spacing={1.5}
-                              alignItems="center"
-                              component={RouterLink}
-                              to={`/market/${asset.id}`}
-                              sx={{ textDecoration: 'none', color: 'inherit' }}
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          sx={{ width: '100%', py: 1.5, px: 2 }}
+                        >
+                          <Stack direction="row" spacing={1.5} alignItems="center">
+                            <Avatar
+                              src={asset.image ?? undefined}
+                              alt={asset.name}
+                              sx={{
+                                width: 48,
+                                height: 48,
+                                bgcolor: '#120212',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                              }}
                             >
-                              <Typography variant="subtitle1" fontWeight={600}>
+                              {asset.symbol?.slice(0, 3) ?? asset.name?.slice(0, 2) ?? '?'}
+                            </Avatar>
+                            <Stack spacing={0.25}>
+                              <Typography variant="subtitle1" fontWeight={700}>
                                 {asset.name}
                               </Typography>
-                              <Chip label={asset.symbol} size="small" color="secondary" />
+                              <Typography variant="body2" color="text.secondary">
+                                {asset.symbol}
+                              </Typography>
                             </Stack>
-                          }
-                          secondary={
-                            <Stack spacing={1.25}>
-                              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                                <Typography variant="body2" color="text.primary">
-                                  Prezzo: {formatPrice(asset.price)}
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  color={asset.change24h >= 0 ? 'success.main' : 'error.main'}
-                                  fontWeight={600}
-                                >
-                                  {asset.change24h >= 0 ? '+' : ''}
-                                  {asset.change24h.toFixed(2)}%
-                                </Typography>
-                              </Stack>
-                              <Stack direction="row" spacing={1}>
-                                <Button size="small" variant="contained" onClick={() => handleOpenDialog(asset, 'buy')}>
-                                  Acquista
-                                </Button>
-                                <Button size="small" variant="outlined" onClick={() => handleOpenDialog(asset, 'sell')}>
-                                  Vendi
-                                </Button>
-                              </Stack>
-                            </Stack>
-                          }
-                        />
-                      </ListItem>
+                          </Stack>
+                          <Stack spacing={0.25} alignItems="flex-end">
+                            <Typography variant="h6">{formatPrice(asset.price)}</Typography>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: asset.change24h >= 0 ? '#1ED760' : '#FF4D6D',
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                              }}
+                            >
+                              {asset.change24h >= 0 ? <FaCaretUp/> : <FaCaretDown/>} {asset.change24h.toFixed(2)}%
+                            </Typography>
+                          </Stack>
+                        </Stack>
+                      </Button>
                     ))}
-                  </List>
+                  </Stack>
                 )}
+                {assets.length > 0 ? (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1.5, fontStyle: 'italic', opacity: 0.8 }}
+                  >
+                    Tocca una riga per aprire la scheda informativa della criptovaluta e scoprire di piu.
+                  </Typography>
+                ) : null}
               </CardContent>
             </Card>
           </Grid>
@@ -324,3 +336,6 @@ export function MarketPage() {
     </Box>
   )
 }
+
+
+

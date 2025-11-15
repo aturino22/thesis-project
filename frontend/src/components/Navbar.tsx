@@ -12,8 +12,7 @@ import ListItemText from '@mui/material/ListItemText'
 import Stack from '@mui/material/Stack'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
-import MenuIcon from '@mui/icons-material/Menu'
-import CloseIcon from '@mui/icons-material/Close'
+import { FaBars, FaTimes } from 'react-icons/fa'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { appConfig } from '@/config/appConfig'
@@ -176,7 +175,7 @@ export function Navbar() {
             sx={{ display: { xs: 'flex', md: 'none' } }}
             aria-label="Apri menu di navigazione"
           >
-            <MenuIcon />
+            <FaBars />
           </IconButton>
         </Box>
       </Toolbar>
@@ -200,7 +199,7 @@ export function Navbar() {
             {appConfig.appName}
           </Typography>
           <IconButton color="inherit" onClick={closeMobileMenu} aria-label="Chiudi menu">
-            <CloseIcon />
+            <FaTimes />
           </IconButton>
         </Box>
         <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
@@ -245,3 +244,6 @@ export function Navbar() {
     </AppBar>
   )
 }
+
+
+

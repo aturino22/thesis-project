@@ -1,6 +1,6 @@
 import { Box, Button, Container, Stack, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
-import HomeRoundedIcon from '@mui/icons-material/HomeRounded'
+import { FaHome } from 'react-icons/fa'
 import { appConfig } from '@/config/appConfig'
 
 export function NotFoundPage() {
@@ -24,11 +24,7 @@ export function NotFoundPage() {
             Il percorso richiesto non esiste. Torna alla dashboard per continuare a lavorare
             sull&apos;interfaccia Material Design.
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<HomeRoundedIcon />}
-            onClick={() => navigate(appConfig.routes.home)}
-          >
+          <Button variant="contained" startIcon={<FaHome />} onClick={() => navigate(appConfig.routes.home)}>
             Torna alla home
           </Button>
         </Stack>
@@ -36,4 +32,7 @@ export function NotFoundPage() {
     </Box>
   )
 }
+
+
+
 
