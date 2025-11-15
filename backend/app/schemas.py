@@ -27,6 +27,12 @@ class AccountListResponse(BaseModel):
     data: List[AccountOut]
 
 
+class AccountTopUpRequest(BaseModel):
+    """Richiesta per incrementare il saldo di un conto."""
+
+    amount: Decimal = Field(..., gt=Decimal("0"), description="Importo positivo da accreditare sul conto")
+
+
 class TransactionOut(BaseModel):
     """Rappresenta una transazione legata a un conto dell'utente."""
 

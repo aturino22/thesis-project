@@ -15,6 +15,15 @@ export type Account = {
   createdAt: string
 }
 
+type AccountTopUpApiResponse = {
+  id: string
+  user_id: string
+  currency: string
+  balance: string
+  name: string
+  created_at: string
+}
+
 export type Transaction = {
   id: string
   accountId: string
@@ -200,6 +209,29 @@ export function useAccountsQuery(
         balance: parseCurrencyAmount(account.balance),
         createdAt: account.created_at,
       }))
+    },
+  })
+}
+
+type AccountTopUpPayload = {
+  accountId: string
+  amount: number
+}
+
+export function useAccountTopUpMutation() {
+  const apiClient = useApiClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ accountId, amount }: AccountTopUpPayload) => {
+      return apiClient.request<AccountTopUpApiResponse>({
+        path: `/accounts/${accountId}/topup`,
+        method: 'POST',
+        body: { amount },
+      })
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: accountsKey })
     },
   })
 }
