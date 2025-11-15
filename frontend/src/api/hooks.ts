@@ -93,6 +93,7 @@ export type MarketAsset = {
   change24h: number
   image?: string | null
   market_cap?: number | null
+  explorer_url?: string | null
 }
 
 type MarketPricesResponse = {
