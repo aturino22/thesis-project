@@ -31,7 +31,9 @@ class Settings(BaseSettings):
     oidc_user_id_claim: str = "sub"
     oidc_jwks_cache_ttl_seconds: int = 300
     oidc_clock_skew_seconds: int = 60
-    oidc_dev_default_scopes: str = "accounts:read transactions:read transactions:write crypto:read"
+    oidc_dev_default_scopes: str = (
+        "accounts:read transactions:read transactions:write crypto:read payouts:read payouts:write"
+    )
 
     otp_service_base_url: str | None = None
     otp_service_timeout_seconds: float = 5.0

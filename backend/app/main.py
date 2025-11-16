@@ -8,7 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import Settings, get_settings
 from .db import lifespan_pool
-from .routes import accounts_router, crypto_positions_router, market_router, otp_router, transactions_router
+from .routes import (
+    accounts_router,
+    crypto_positions_router,
+    market_router,
+    otp_router,
+    transactions_router,
+    withdrawals_router,
+)
 
 
 @asynccontextmanager
@@ -71,6 +78,7 @@ def create_app() -> FastAPI:
     app.include_router(market_router)
     app.include_router(transactions_router)
     app.include_router(otp_router)
+    app.include_router(withdrawals_router)
 
     return app
 

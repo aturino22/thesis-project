@@ -70,6 +70,57 @@ class TransactionResponse(BaseModel):
     data: TransactionOut
 
 
+class WithdrawalMethodCreate(BaseModel):
+    """Payload per registrare un metodo di prelievo bancario."""
+
+    account_holder_name: str = Field(..., max_length=140)
+    iban: str = Field(..., min_length=15, max_length=34)
+    bic: Optional[str] = Field(None, min_length=8, max_length=11)
+    bank_name: Optional[str] = Field(None, max_length=140)
+    is_default: bool = False
+
+
+class WithdrawalMethodOut(BaseModel):
+    """Dettaglio di un metodo di prelievo salvato."""
+
+    id: UUID
+    user_id: UUID
+    type: str
+    iban: str
+    bic: Optional[str]
+    bank_name: Optional[str]
+    account_holder_name: str
+    is_default: bool
+    status: str
+    created_at: datetime
+    verified_at: Optional[datetime]
+
+
+class WithdrawalRequest(BaseModel):
+    """Richiesta di creazione di un prelievo."""
+
+    account_id: UUID
+    method_id: UUID
+    amount: Decimal = Field(..., gt=Decimal("0.00"))
+    currency: str = Field("EUR", min_length=3, max_length=3)
+
+
+class WithdrawalOut(BaseModel):
+    """Dettaglio di una singola richiesta di withdrawal."""
+
+    id: UUID
+    user_id: UUID
+    method_id: UUID
+    account_id: UUID
+    amount: Decimal
+    fee: Decimal
+    currency: str
+    total_debit: Decimal
+    status: str
+    requested_at: datetime
+    reference: str
+
+
 class CryptoPositionOut(BaseModel):
     """Rappresenta una posizione crypto aggregata per l'utente corrente."""
 
