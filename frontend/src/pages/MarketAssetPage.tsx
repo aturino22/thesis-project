@@ -270,18 +270,30 @@ export function MarketAssetPage() {
     selectedAccountId && accounts.length > 0 ? accounts.find((account) => account.id === selectedAccountId) : accounts[0]
   const selectedAccountBalance = Number(resolvedAccount?.balance ?? 0)
   const selectedAccountCurrency = resolvedAccount?.currency ?? 'EUR'
-  const maxSellQuantity = position ? Number(position.amount) : 0
-  const maxBuyQuantity = asset.price > 0 ? selectedAccountBalance / asset.price : 0
+  const QUANTITY_DECIMALS = 6
+  const MIN_ACCOUNT_RESIDUAL = 0.01
+  const floorQuantity = (value: number) => {
+    if (!(value > 0)) {
+      return 0
+    }
+    const factor = 10 ** QUANTITY_DECIMALS
+    return Math.floor(value * factor) / factor
+  }
+  const maxSellQuantity = position ? floorQuantity(Number(position.amount)) : 0
+  const availableForBuy = Math.max(selectedAccountBalance - MIN_ACCOUNT_RESIDUAL, 0)
+  const rawMaxBuy = asset.price > 0 ? availableForBuy / asset.price : 0
+  const maxBuyQuantity = floorQuantity(rawMaxBuy)
   const tradeMaxQuantity = tradeSide === 'sell' ? maxSellQuantity : maxBuyQuantity
   const formattedTradeMaxQuantity =
-    tradeMaxQuantity > 0 ? tradeMaxQuantity.toLocaleString('it-IT', { maximumFractionDigits: 6 }) : '0'
+    tradeMaxQuantity > 0 ? tradeMaxQuantity.toLocaleString('it-IT', { maximumFractionDigits: QUANTITY_DECIMALS }) : '0'
   const applyMaxBuyQuantity = () => {
     if (tradeSide === 'buy' && tradeMaxQuantity > 0) {
-      setQuantity(tradeMaxQuantity.toFixed(6))
+      setQuantity(tradeMaxQuantity.toFixed(QUANTITY_DECIMALS))
       setFormError(null)
     }
   }
   const isMaxBuyError = formError?.includes('Clicca per comprare la massima quantita acquistabile')
+  const canUseMaxButton = tradeSide === 'buy' && tradeMaxQuantity > 0
 
   return (
     <Box component="section" sx={{ bgcolor: '#000000', py: { xs: 4, md: 6 } }}>
@@ -363,29 +375,7 @@ export function MarketAssetPage() {
                 >
                   Vendi
                 </Button>
-                <IconButton
-                  size="small"
-                  sx={{
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'text.secondary',
-                  }}
-                >
-                  <FaEllipsisH />
-                </IconButton>
               </Stack>
-              {asset.explorer_url ? (
-                <Button
-                  component="a"
-                  href={asset.explorer_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  size="small"
-                  variant="text"
-                  sx={{ color: 'text.secondary' }}
-                >
-                  Apri explorer
-                </Button>
-              ) : null}
             </Stack>
           </Box>
 
@@ -663,7 +653,7 @@ export function MarketAssetPage() {
         </Stack>
       </Container>
 
-      <Dialog open={tradeDialogOpen} onClose={handleCloseTradeDialog} fullWidth maxWidth="sm">
+      <Dialog open={tradeDialogOpen} onClose={handleCloseTradeDialog} fullWidth maxWidth="md" maxHeight="md">
         <DialogTitle>
           {dialogTitle} {asset.name}
         </DialogTitle>
@@ -673,7 +663,12 @@ export function MarketAssetPage() {
               Nessun conto disponibile. Crea un conto in EUR per poter operare.
             </Alert>
           ) : null}
-          <FormControl fullWidth size="small" disabled={accounts.length === 0 || dialogDisabled}>
+          <FormControl
+            fullWidth
+            size="small"
+            disabled={accounts.length === 0 || dialogDisabled}
+            sx={{ mt: 1.5 }}
+          >
             <InputLabel id="asset-account-label">Conto</InputLabel>
             <Select
               labelId="asset-account-label"
@@ -688,18 +683,37 @@ export function MarketAssetPage() {
               ))}
             </Select>
           </FormControl>
-          <TextField
-            type="number"
-            label="Quantita"
-            size="small"
-            value={quantity}
-            onChange={(event) => setQuantity(event.target.value)}
-            inputProps={{
-              min: 0,
-              step: '0.0001',
-              max: tradeMaxQuantity > 0 ? tradeMaxQuantity : undefined,
-            }}
-          />
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center">
+            <TextField
+              type="number"
+              label="Quantita"
+              size="small"
+              fullWidth
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
+              inputProps={{
+                min: 0,
+                step: '0.0001',
+                max: tradeMaxQuantity > 0 ? tradeMaxQuantity : undefined,
+              }}
+            />
+            {(tradeSide === 'buy' ? canUseMaxButton : tradeMaxQuantity > 0) ? (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  if (tradeSide === 'buy') {
+                    applyMaxBuyQuantity()
+                  } else if (tradeMaxQuantity > 0) {
+                    setQuantity(tradeMaxQuantity.toFixed(QUANTITY_DECIMALS))
+                    setFormError(null)
+                  }
+                }}
+              >
+                Max
+              </Button>
+            ) : null}
+          </Stack>
           <Typography variant="caption" color="text.secondary">
             {tradeSide === 'sell'
               ? `Disponibile: ${formattedHeldQuantity} ${asset.symbol}.`
@@ -712,7 +726,24 @@ export function MarketAssetPage() {
             Totale: {formatPrice(tradeTotal)}
           </Typography>
           {formError ? (
-            <Alert severity="error" variant="outlined">
+            <Alert
+              severity="error"
+              variant="outlined"
+              onClick={
+                isMaxBuyError
+                  ? applyMaxBuyQuantity
+                  : tradeSide === 'sell' && tradeMaxQuantity > 0
+                  ? () => {
+                      setQuantity(tradeMaxQuantity.toFixed(QUANTITY_DECIMALS))
+                      setFormError(null)
+                    }
+                  : undefined
+              }
+              sx={{
+                cursor:
+                  isMaxBuyError || (tradeSide === 'sell' && tradeMaxQuantity > 0) ? 'pointer' : 'default',
+              }}
+            >
               {formError}
             </Alert>
           ) : null}
@@ -754,10 +785,6 @@ export function MarketAssetPage() {
     </Box>
   )
 }
-
-
-
-
 
 
 
