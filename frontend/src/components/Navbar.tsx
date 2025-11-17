@@ -141,7 +141,10 @@ export function Navbar() {
         borderBottom: '1px solid',
         borderColor: 'divider',
         backdropFilter: 'blur(8px)',
-        backgroundColor: 'rgba(2, 6, 23, 0.8)',
+        backgroundColor: (theme) =>
+          theme.palette.mode === 'dark'
+            ? theme.palette.background.paper
+            : theme.palette.background.default,
       }}
     >
       <Toolbar sx={{ minHeight: 72, display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -188,7 +191,7 @@ export function Navbar() {
         PaperProps={{
           sx: {
             width: 280,
-            backgroundColor: 'rgba(3, 7, 18, 0.95)',
+            backgroundColor: 'background.paper',
             color: 'text.primary',
             backdropFilter: 'blur(12px)',
           },

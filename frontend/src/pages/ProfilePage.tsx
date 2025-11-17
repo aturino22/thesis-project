@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEventHandler } from 'react'
+import { useEffect, useState, type ChangeEvent, type MouseEventHandler } from 'react'
 import {
   Alert,
   Avatar,
@@ -17,6 +17,7 @@ import {
   Divider,
   Chip,
   FormControlLabel,
+  Switch,
   IconButton,
   Stack,
   TextField,
@@ -34,6 +35,7 @@ import {
   useWithdrawalMethodsQuery,
   type WithdrawalMethod,
 } from '@/api/hooks'
+import { useColorVisionMode } from '@/theme/ColorVisionProvider'
 
 type UserProfile = {
   preferred_username?: string
@@ -108,6 +110,8 @@ export function ProfilePage() {
   const withdrawalMethodsQuery = useWithdrawalMethodsQuery({ enabled: isAuthenticated })
   const createWithdrawalMethod = useCreateWithdrawalMethodMutation()
   const deleteWithdrawalMethod = useDeleteWithdrawalMethodMutation()
+  const { mode: colorVisionMode, setMode: setColorVisionMode } = useColorVisionMode()
+  const isDaltonicEnabled = colorVisionMode === 'daltonic'
 
   const profileData = (auth.user?.profile ?? {}) as UserProfile
 
@@ -223,10 +227,14 @@ export function ProfilePage() {
     setMethodPendingDeletion(null)
   }
 
+  const handleColorVisionToggle = (event: ChangeEvent<HTMLInputElement>) => {
+    setColorVisionMode(event.target.checked ? 'daltonic' : 'default')
+  }
+
 
   if (!isAuthenticated) {
     return (
-      <Box component="section" sx={{ py: { xs: 4, md: 6 } }}>
+      <Box component="section" sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
         <Container maxWidth="md">
           <Alert severity="info" variant="outlined">
             Effettua l'accesso per visualizzare il tuo profilo.
@@ -237,7 +245,7 @@ export function ProfilePage() {
   }
 
   return (
-    <Box component="section" sx={{ py: { xs: 4, md: 6 } }}>
+    <Box component="section" sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
       <Container maxWidth="lg">
         <Stack spacing={4}>
           <div>
@@ -320,6 +328,32 @@ export function ProfilePage() {
                     Esci
                   </Button>
                 </CardActions>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Card sx={{ height: '100%', mr: { xs: 2, md: 0 } }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack spacing={0}>
+                      <Typography variant="overline" color="text.secondary">
+                        Tema
+                      </Typography>
+                      <Typography variant="h5" fontWeight={700}>
+                        Modalità grafica
+                      </Typography>
+                    </Stack>
+                  </Stack>
+
+                  <Typography variant="body2" color="text.secondary">
+                    Scegli se utilizzare il tema chiaro oppure quello scuro ad alto contrasto.
+                  </Typography>
+
+                  <FormControlLabel
+                    control={<Switch checked={isDaltonicEnabled} onChange={handleColorVisionToggle} />}
+                    label={isDaltonicEnabled ? 'Tema chiaro' : 'Tema scuro'}
+                  />
+                </CardContent>
               </Card>
             </Grid>
 
@@ -430,7 +464,7 @@ export function ProfilePage() {
                             border: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: 2,
                             p: 1.5,
-                            bgcolor: 'rgba(255,255,255,0.02)',
+                            bgcolor: 'action.hover',
                           }}
                         >
                           <Stack direction="row" justifyContent="space-between" alignItems="center">

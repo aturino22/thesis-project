@@ -1,5 +1,6 @@
 import { useMemo, useState, type MouseEventHandler } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
+import { alpha, useTheme } from '@mui/material/styles'
 import {
   Alert,
   Avatar,
@@ -40,6 +41,7 @@ const formatPrice = (value: number) =>
   new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value)
 
 export function MarketPage() {
+  const theme = useTheme()
   const accountsQuery = useAccountsQuery({ enabled: true })
   const tradeMutation = useCryptoTradeMutation()
   const marketQuery = useMarketPricesQuery({ enabled: true })
@@ -119,7 +121,7 @@ export function MarketPage() {
   const dialogDisabled = tradeMutation.isPending || accounts.length === 0
 
   return (
-    <Box component="section" sx={{ bgcolor: '#000000', py: { xs: 4, md: 6 } }}>
+    <Box component="section" sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
       <Container maxWidth="lg">
         <Grid container spacing={3}>
           <Grid item xs={12}>
@@ -162,7 +164,7 @@ export function MarketPage() {
                 {marketQuery.isLoading ? (
                   <Stack spacing={1.25}>
                     {Array.from({ length: 5 }).map((_, index) => (
-                      <Skeleton key={`market-skel-${index}`} variant="rounded" height={64} />
+                      <Skeleton key={`market-skel-${index}`} variant="rounded" height={64} sx={{ bgcolor: 'action.hover' }} />
                     ))}
                   </Stack>
                 ) : marketQuery.isError ? (
@@ -181,12 +183,16 @@ export function MarketPage() {
                           justifyContent: 'flex-start',
                           borderRadius: 3,
                           textTransform: 'none',
-                          color: 'inherit',
-                          bgcolor: 'rgba(20,12,20,0.6)',
-                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: 'text.primary',
+                          bgcolor:
+                            theme.palette.mode === 'dark'
+                              ? alpha(theme.palette.background.paper, 0.4)
+                              : theme.palette.background.paper,
+                          border: '1px solid',
+                          borderColor: 'divider',
                           transition: 'transform 0.2s ease, border-color 0.2s ease',
                           '&:hover': {
-                            borderColor: 'rgba(241,196,15,0.8)',
+                            borderColor: theme.palette.warning.main,
                             transform: 'translateY(-2px)',
                           },
                         }}
@@ -204,8 +210,9 @@ export function MarketPage() {
                               sx={{
                                 width: 48,
                                 height: 48,
-                                bgcolor: '#120212',
-                                border: '1px solid rgba(255,255,255,0.08)',
+                                bgcolor: theme.palette.background.default,
+                                border: '1px solid',
+                                borderColor: 'divider',
                               }}
                             >
                               {asset.symbol?.slice(0, 3) ?? asset.name?.slice(0, 2) ?? '?'}
@@ -224,7 +231,7 @@ export function MarketPage() {
                             <Typography
                               variant="body2"
                               sx={{
-                                color: asset.change24h >= 0 ? '#1ED760' : '#FF4D6D',
+                                color: asset.change24h >= 0 ? 'primary.main' : 'error.main',
                                 fontWeight: 600,
                                 display: 'flex',
                                 alignItems: 'center',

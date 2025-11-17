@@ -27,6 +27,7 @@ import {
 } from '@mui/material'
 import { FaArrowLeft, FaCaretDown, FaCaretUp, FaEllipsisH, FaEuroSign } from 'react-icons/fa'
 import { useAccountsQuery, useCryptoTradeMutation, useMarketAssetQuery } from '@/api/hooks'
+import { alpha, useTheme } from '@mui/material/styles'
 
 const formatPrice = (value: number) =>
   new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value)
@@ -41,6 +42,7 @@ const formatAxisTimestamp = (timestamp: number) =>
   })
 
 export function MarketAssetPage() {
+  const theme = useTheme()
   const { ticker: assetIdentifier = '' } = useParams<{ ticker: string }>()
   const assetDetail = useMarketAssetQuery(assetIdentifier, { enabled: Boolean(assetIdentifier) })
   const accountsQuery = useAccountsQuery({ enabled: true })
@@ -194,25 +196,26 @@ export function MarketAssetPage() {
 
   if (assetDetail.isLoading) {
     return (
-      <Box component="section" sx={{ bgcolor: '#000000', py: { xs: 4, md: 6 } }}>
+      <Box component="section" sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
         <Container maxWidth="lg">
           <Stack spacing={3}>
-            <Skeleton variant="text" width={200} height={32} sx={{ bgcolor: 'grey.800' }} />
+            <Skeleton variant="text" width={200} height={32} sx={{ bgcolor: 'action.hover' }} />
             {Array.from({ length: 3 }).map((_, index) => (
               <Card
                 key={`asset-skeleton-${index}`}
                 sx={{
                   borderRadius: 3,
                   backgroundColor: 'background.paper',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  border: '1px solid',
+                  borderColor: 'divider',
                 }}
               >
                 <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  <Skeleton variant="text" width="60%" height={24} sx={{ bgcolor: 'grey.800' }} />
+                  <Skeleton variant="text" width="60%" height={24} sx={{ bgcolor: 'action.hover' }} />
                   <Skeleton
                     variant="rounded"
                     height={index === 1 ? 220 : 140}
-                    sx={{ bgcolor: 'grey.900', borderRadius: 2 }}
+                    sx={{ bgcolor: 'action.hover', borderRadius: 2 }}
                   />
                 </CardContent>
               </Card>
@@ -225,7 +228,7 @@ export function MarketAssetPage() {
 
   if (assetDetail.isError) {
     return (
-      <Box component="section" sx={{ bgcolor: '#000000', py: { xs: 4, md: 6 } }}>
+      <Box component="section" sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
         <Container maxWidth="md">
           <Alert severity="error" variant="outlined" sx={{ borderRadius: 2 }}>
             {assetDetail.error?.message ?? 'Impossibile caricare il dettaglio della crypto.'}
@@ -242,7 +245,7 @@ export function MarketAssetPage() {
 
   if (!asset) {
     return (
-      <Box component="section" sx={{ bgcolor: '#000000', py: { xs: 4, md: 6 } }}>
+      <Box component="section" sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
         <Container maxWidth="md">
           <Alert severity="warning" variant="outlined" sx={{ borderRadius: 2 }}>
             Asset non disponibile. Torna alla pagina{' '}
@@ -265,7 +268,7 @@ export function MarketAssetPage() {
   const dialogTitle = tradeSide === 'buy' ? 'Acquista' : 'Vendi'
   const investmentValue = position ? position.eurValue : 0
   const deltaSign = asset.change24h >= 0 ? '+' : '-'
-  const deltaColor = asset.change24h >= 0 ? '#1ED760' : '#FF4D6D'
+  const deltaColor = asset.change24h >= 0 ? theme.palette.primary.main : theme.palette.error.main
   const resolvedAccount =
     selectedAccountId && accounts.length > 0 ? accounts.find((account) => account.id === selectedAccountId) : accounts[0]
   const selectedAccountBalance = Number(resolvedAccount?.balance ?? 0)
@@ -296,7 +299,7 @@ export function MarketAssetPage() {
   const canUseMaxButton = tradeSide === 'buy' && tradeMaxQuantity > 0
 
   return (
-    <Box component="section" sx={{ bgcolor: '#000000', py: { xs: 4, md: 6 } }}>
+    <Box component="section" sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
       <Container maxWidth="lg">
         <Stack spacing={3}>
           <Button
@@ -312,8 +315,12 @@ export function MarketAssetPage() {
           <Box
             sx={{
               borderRadius: 3,
-              border: '1px solid rgba(241,196,15,0.2)',
-              background: 'linear-gradient(135deg, rgba(18,2,18,0.9), rgba(3,3,3,0.9))',
+              border: '1px solid',
+              borderColor: alpha(theme.palette.primary.main, 0.3),
+              background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)}, ${alpha(
+                theme.palette.background.default,
+                0.9,
+              )})`,
               p: { xs: 3, md: 4 },
             }}
           >
@@ -339,9 +346,9 @@ export function MarketAssetPage() {
                   <Typography variant="body1" sx={{ color: deltaColor, fontWeight: 600 }}>
                     {Math.abs(asset.change24h).toFixed(2)}%
                   </Typography>
-                  <Chip label="Oggi" size="small" sx={{ bgcolor: '#7C4DFF', color: '#fff' }} />
+                  <Chip label="Oggi" size="small" sx={{ bgcolor: 'secondary.main', color: 'secondary.contrastText' }} />
                 </Stack>
-                <Typography variant="body2" sx={{ color: '#B0BEC5' }}>
+                <Typography variant="body2" color="text.secondary">
                   Quantita detenuta: {formattedHeldQuantity} {asset.symbol}
                 </Typography>
               </Stack>
@@ -351,14 +358,15 @@ export function MarketAssetPage() {
                 sx={{
                   width: 72,
                   height: 72,
-                  bgcolor: '#0d0d0d',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  bgcolor: 'background.default',
+                  border: '1px solid',
+                  borderColor: 'divider',
                 }}
               >
                 {asset.symbol?.slice(0, 3) ?? asset.name?.slice(0, 2) ?? '?'}
               </Avatar>
             </Stack>
-            <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.08)' }} />
+            <Divider sx={{ my: 3, borderColor: 'divider' }} />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems="center">
               <Stack direction="row" spacing={1}>
                 <Button
@@ -382,8 +390,9 @@ export function MarketAssetPage() {
           <Card
             sx={{
               borderRadius: 3,
-              backgroundColor: '#050505',
-              border: '1px solid rgba(255,255,255,0.08)',
+              backgroundColor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
             }}
           >
             <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -408,18 +417,18 @@ export function MarketAssetPage() {
                   <svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height="100%">
                     <defs>
                       <linearGradient id="assetGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="rgba(255, 82, 82, 0.35)" />
-                        <stop offset="100%" stopColor="rgba(5, 5, 5, 0)" />
+                        <stop offset="0%" stopColor={alpha(theme.palette.primary.main, 0.35)} />
+                        <stop offset="100%" stopColor={alpha(theme.palette.background.default, 0)} />
                       </linearGradient>
                     </defs>
-                    <rect width="100%" height="100%" fill="rgba(255,255,255,0.02)" rx="4" />
-                    <line x1="5" y1="10" x2="5" y2="90" stroke="rgba(255,255,255,0.15)" strokeWidth={0.6} />
+                    <rect width="100%" height="100%" fill={alpha(theme.palette.common.white, 0.02)} rx="4" />
+                    <line x1="5" y1="10" x2="5" y2="90" stroke={alpha(theme.palette.common.white, 0.15)} strokeWidth={0.6} />
                     <line
                       x1="5"
                       y1="50"
                       x2="95"
                       y2="50"
-                      stroke="rgba(255,255,255,0.12)"
+                      stroke={alpha(theme.palette.common.white, 0.12)}
                       strokeWidth={0.6}
                       strokeDasharray="4 2"
                     />
@@ -429,7 +438,7 @@ export function MarketAssetPage() {
                         <polyline
                           points={chartData.polyline}
                           fill="none"
-                          stroke="rgba(255, 82, 82, 0.9)"
+                          stroke={theme.palette.primary.main}
                           strokeWidth={2}
                           strokeLinecap="round"
                         />
@@ -485,8 +494,9 @@ export function MarketAssetPage() {
           <Card
             sx={{
               borderRadius: 3,
-              backgroundColor: '#050505',
-              border: '1px solid rgba(255,255,255,0.08)',
+              backgroundColor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
             }}
           >
             <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -505,8 +515,9 @@ export function MarketAssetPage() {
                     mt: 1,
                     p: 2,
                     borderRadius: 2,
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    bgcolor: '#0b0b0b',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
                   }}
                 >
                   <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
@@ -514,7 +525,7 @@ export function MarketAssetPage() {
                       <Avatar
                         src={asset.image ?? undefined}
                         alt={asset.name}
-                        sx={{ width: 40, height: 40, bgcolor: '#120212', border: '1px solid rgba(255,255,255,0.08)' }}
+                        sx={{ width: 40, height: 40, bgcolor: 'background.default', border: '1px solid', borderColor: 'divider' }}
                       >
                         {asset.symbol?.slice(0, 2) ?? '?'}
                       </Avatar>
@@ -549,8 +560,9 @@ export function MarketAssetPage() {
           <Card
             sx={{
               borderRadius: 3,
-              backgroundColor: '#050505',
-              border: '1px solid rgba(255,255,255,0.08)',
+              backgroundColor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
             }}
           >
             <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -569,14 +581,15 @@ export function MarketAssetPage() {
                     const quantityLabel = `${Math.abs(quantityEstimate).toFixed(3)} ${asset.symbol}`
                     const euroLabel = `${formatPrice(transaction.amount)}`
                     const isBuy = transaction.direction === 'buy'
-                    const txColor = isBuy ? '#1ED760' : '#FF4D6D'
+                    const txColor = isBuy ? theme.palette.primary.main : theme.palette.error.main
                     return (
                       <Box
                         key={transaction.id}
                         sx={{
                           borderRadius: 2,
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          bgcolor: '#0b0b0b',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          bgcolor: 'background.paper',
                           p: 2,
                         }}
                       >
@@ -587,8 +600,9 @@ export function MarketAssetPage() {
                                 sx={{
                                   width: 36,
                                   height: 36,
-                                  bgcolor: '#120212',
-                                  border: '1px solid rgba(255,255,255,0.1)',
+                                  bgcolor: 'background.default',
+                                  border: '1px solid',
+                                  borderColor: 'divider',
                                   fontWeight: 700,
                                 }}
                               >
@@ -598,8 +612,8 @@ export function MarketAssetPage() {
                                 sx={{
                                   width: 36,
                                   height: 36,
-                                  bgcolor: '#0f172a',
-                                  color: '#fff',
+                                  bgcolor: 'primary.main',
+                                  color: 'primary.contrastText',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -635,7 +649,7 @@ export function MarketAssetPage() {
                               </Typography>
                             </Stack>
                             <Stack direction="row" spacing={0.5} alignItems="center">
-                              <FaEuroSign color="rgba(255,255,255,0.7)" />
+                              <FaEuroSign color={theme.palette.text.secondary} />
                               <Typography variant="caption" color="text.secondary">
                                 {isBuy ? '-' : '+'}
                                 {euroLabel}
@@ -653,7 +667,7 @@ export function MarketAssetPage() {
         </Stack>
       </Container>
 
-      <Dialog open={tradeDialogOpen} onClose={handleCloseTradeDialog} fullWidth maxWidth="md" maxHeight="md">
+      <Dialog open={tradeDialogOpen} onClose={handleCloseTradeDialog} fullWidth maxWidth="md">
         <DialogTitle>
           {dialogTitle} {asset.name}
         </DialogTitle>

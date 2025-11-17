@@ -18,6 +18,7 @@ import {
 } from '@mui/material'
 import Grid from '@mui/material/GridLegacy'
 import { FaRocket, FaShieldAlt } from 'react-icons/fa'
+import { alpha, useTheme } from '@mui/material/styles'
 import { useAuth } from 'react-oidc-context'
 import { appConfig } from '@/config/appConfig'
 import {
@@ -127,6 +128,7 @@ const formatDateTime = (isoString: string) =>
   })
 
 export function HomePage() {
+  const theme = useTheme()
   const auth = useAuth()
   const loading =
     auth.isLoading ||
@@ -196,7 +198,7 @@ export function HomePage() {
     <Box
       component="main"
       sx={{
-        bgcolor: '#000000',
+        bgcolor: 'background.default',
         minHeight: '100vh',
         py: { xs: 6, md: 10 },
       }}
@@ -217,9 +219,9 @@ export function HomePage() {
                   sx={{
                     fontWeight: 700,
                     px: 0.5,
-                    borderColor: 'rgba(0, 200, 83, 0.6)',
-                    color: '#1ED760',
-                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                    backgroundColor: 'rgba(30, 215, 96, 0.12)',
                   }}
                 />
                 {loading && (
@@ -236,39 +238,16 @@ export function HomePage() {
                 <Typography variant="h3" component="h1">
                   {appConfig.appName}
                 </Typography>
-                {isAuthenticated && (
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Avatar
-                      sx={{
-                        bgcolor: 'primary.main',
-                        color: 'primary.contrastText',
-                        width: 40,
-                        height: 40,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {displayName?.[0]?.toUpperCase() ?? 'U'}
-                    </Avatar>
-                    <Stack spacing={0}>
-                      <Typography variant="body2" color="text.secondary">
-                        Utente autenticato
-                      </Typography>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        {displayName}
-                      </Typography>
-                    </Stack>
-                  </Stack>
-                )}
               </Stack>
               <Typography
                 variant="body1"
                 sx={{
                   maxWidth: { xs: '100%', md: '65ch' },
-                  color: 'rgba(255, 255, 255, 0.85)',
+                  color: 'text.secondary',
                 }}
               >
                 Piattaforma di digital banking che ti permette di{' '}
-                <Box component="span" sx={{ color: '#1ED760', fontWeight: 700 }}>
+                <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>
                   muovere capitali, investire e pagare
                 </Box>{' '}
                 con una sola app: controlli biometrici, alert istantanei e gestione multi-valuta
@@ -302,14 +281,14 @@ export function HomePage() {
                     height: '100%',
                     borderRadius: 3,
                     border: '1px solid rgba(0, 200, 83, 0.25)',
-                    color: '#E9FFE7',
+                    color: 'text.primary',
                     backgroundColor: 'background.paper',
                   }}
                 >
                   <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Stack spacing={0.25}>
-                        <Typography variant="overline" sx={{ color: '#1ED760', letterSpacing: 1 }}>
+                        <Typography variant="overline" sx={{ color: 'primary.main', letterSpacing: 1 }}>
                           Crypto portfolio
                         </Typography>
                         <Typography variant="h5" component="h3">
@@ -321,13 +300,13 @@ export function HomePage() {
                         color="success"
                         variant="outlined"
                         size="small"
-                        sx={{ fontWeight: 600, borderColor: 'rgba(0, 200, 83, 0.4)', color: '#1ED760' }}
+                        sx={{ fontWeight: 600, borderColor: 'rgba(30, 215, 96, 0.4)', color: 'primary.main' }}
                       />
                     </Stack>
                     <Typography variant="h4" fontWeight={700}>
                       {cryptoPositionsQuery.isLoading ? '...' : formatCurrency(cryptoTotalValue, 'EUR')}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(233,255,231,0.8)' }}>
+                    <Typography variant="body2" color="text.secondary">
                       Portafoglio custodial con le principali crypto detenute dal profilo attuale.
                     </Typography>
                     <Divider sx={{ borderColor: 'rgba(0, 200, 83, 0.2)' }} />
@@ -356,7 +335,8 @@ export function HomePage() {
                               sx={{
                                 py: 1.25,
                                 borderBottom:
-                                  index === cryptoPositions.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                                  index === cryptoPositions.length - 1 ? 'none' : '1px solid',
+                                borderColor: index === cryptoPositions.length - 1 ? undefined : 'divider',
                                 alignItems: 'flex-start',
                               }}
                             >
@@ -367,7 +347,7 @@ export function HomePage() {
                                       src={asset.iconUrl ?? undefined}
                                       alt={asset.name}
                                       variant="rounded"
-                                      sx={{ width: 40, height: 40, bgcolor: '#0d0d0d' }}
+                                      sx={{ width: 40, height: 40, bgcolor: 'background.default' }}
                                     >
                                       {!asset.iconUrl ? asset.ticker[0] ?? asset.name[0] ?? '?' : null}
                                     </Avatar>
@@ -375,7 +355,7 @@ export function HomePage() {
                                       <Typography variant="subtitle2" fontWeight={600}>
                                         {asset.name}
                                       </Typography>
-                                      <Typography variant="caption" sx={{ color: 'rgba(233,255,231,0.75)' }}>
+                                      <Typography variant="caption" color="text.secondary">
                                         {asset.amount.toLocaleString('it-IT', { maximumFractionDigits: 6 })}{' '}
                                         {asset.ticker}
                                       </Typography>
@@ -389,7 +369,7 @@ export function HomePage() {
                                       <Typography
                                         variant="caption"
                                         sx={{
-                                          color: asset.change24hPercent >= 0 ? '#1ED760' : '#FF4D6D',
+                                          color: asset.change24hPercent >= 0 ? 'primary.main' : 'error.main',
                                           fontWeight: 600,
                                         }}
                                       >
@@ -407,14 +387,14 @@ export function HomePage() {
                                   sx={{
                                     height: 4,
                                     borderRadius: 999,
-                                    backgroundColor: 'rgba(255,255,255,0.08)',
+                                    backgroundColor: alpha(theme.palette.text.primary, 0.08),
                                     overflow: 'hidden',
                                   }}
                                 >
                                   <Box
                                     sx={{
                                       width: `${share}%`,
-                                      background: 'linear-gradient(90deg, #F1C40F, #1ED760)',
+                                      background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.primary.main})`,
                                       height: '100%',
                                     }}
                                   />
@@ -435,7 +415,7 @@ export function HomePage() {
                     height: '100%',
                     borderRadius: 3,
                     border: '1px solid rgba(241, 196, 15, 0.25)',
-                    color: '#E9FFE7',
+                    color: 'text.primary',
                     backgroundColor: 'background.paper',
                   }}
                 >
@@ -518,7 +498,7 @@ export function HomePage() {
                   sx={{
                     borderRadius: 3,
                     border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#E9FFE7',
+                    color: 'text.primary',
                     backgroundColor: 'background.paper',
                   }}
                 >
@@ -588,6 +568,7 @@ export function HomePage() {
                                   </Typography>
                                 </Stack>
                               }
+                              secondaryTypographyProps={{ component: 'div' }}
                             />
                           </ListItem>
                         ))}
@@ -602,7 +583,7 @@ export function HomePage() {
                   sx={{
                     borderRadius: 3,
                     border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#E9FFE7',
+                    color: 'text.primary',
                     backgroundColor: 'background.paper',
                   }}
                 >
@@ -685,6 +666,7 @@ export function HomePage() {
                                   {transaction.category ?? 'Nessuna categoria'}
                                 </Typography>
                               }
+                              secondaryTypographyProps={{ component: 'div' }}
                             />
                           </ListItem>
                         ))}
