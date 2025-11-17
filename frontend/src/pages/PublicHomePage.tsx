@@ -1,4 +1,4 @@
-import type { MouseEventHandler } from 'react'
+import { useState, type MouseEventHandler } from 'react'
 import {
   Alert,
   Box,
@@ -7,6 +7,10 @@ import {
   CardContent,
   Chip,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Stack,
   Typography,
 } from '@mui/material'
@@ -15,6 +19,8 @@ import { FaRocket, FaSignInAlt } from 'react-icons/fa'
 import { appConfig } from '@/config/appConfig'
 
 const experienceTags = ['Bonifici in tempo reale', 'Carte virtuali tokenizzate', 'Investimenti globali']
+const DISCLAIMER_MESSAGE =
+  'Il portafoglio che stai utilizzando è nato come progetto universitario a fini didattici. Tutte le operazioni mostrate sono simulate: acquisti, vendite e transazioni non generano movimenti di denaro reale né effetti finanziari.'
 
 type ShowcaseHighlight = {
   title: string
@@ -66,11 +72,39 @@ export function PublicHomePage({
   showMockedAuthChip,
   errorMessage,
 }: PublicHomePageProps) {
+  const [disclaimerOpen, setDisclaimerOpen] = useState(true)
+
+  const acknowledgeDisclaimer = () => setDisclaimerOpen(false)
+
   return (
-    <Box component="main" sx={{ bgcolor: '#000000', minHeight: '100vh', py: { xs: 6, md: 10 } }}>
-      <Container maxWidth="lg">
-        <Stack spacing={{ xs: 6, md: 8 }}>
-          <Stack spacing={3}>
+    <>
+      <Dialog
+        open={disclaimerOpen}
+        aria-labelledby="disclaimer-dialog-title"
+        aria-describedby="disclaimer-dialog-description"
+        maxWidth="md"
+        fullWidth
+        disableEscapeKeyDown
+        onClose={(_, reason) => {
+          if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+            return
+          }
+        }}
+      >
+        <DialogTitle id="disclaimer-dialog-title">Avviso importante</DialogTitle>
+        <DialogContent dividers id="disclaimer-dialog-description">
+          <Typography variant="body1">{DISCLAIMER_MESSAGE}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={acknowledgeDisclaimer}>
+            Ho capito
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Box component="main" sx={{ bgcolor: '#000000', minHeight: '100vh', py: { xs: 6, md: 10 } }}>
+        <Container maxWidth="lg">
+          <Stack spacing={{ xs: 6, md: 8 }}>
+            <Stack spacing={3}>
             <Stack spacing={1.5}>
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
@@ -272,6 +306,7 @@ export function PublicHomePage({
         </Stack>
       </Container>
     </Box>
+  </>
   )
 }
 
