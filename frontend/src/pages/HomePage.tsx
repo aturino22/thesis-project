@@ -177,11 +177,6 @@ export function HomePage() {
     })
   }
 
-  const displayName =
-    auth.user?.profile?.preferred_username ??
-    auth.user?.profile?.name ??
-    auth.user?.profile?.email
-
   if (!isAuthenticated) {
     return (
       <PublicHomePage
@@ -274,7 +269,7 @@ export function HomePage() {
           ) : null}
 
           <Stack spacing={3}>
-            <Grid container spacing={3}>
+            <Grid container rowSpacing={3} columnSpacing={{ xs: 0, md: 3 }}>
               <Grid item xs={12} md={6}>
                 <Card
                   sx={{
@@ -492,7 +487,7 @@ export function HomePage() {
               </Grid>
             </Grid>
 
-            <Grid container spacing={3}>
+            <Grid container rowSpacing={3} columnSpacing={{ xs: 0, md: 3 }}>
               <Grid item xs={12} md={6}>
                 <Card
                   sx={{

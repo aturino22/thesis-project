@@ -260,9 +260,9 @@ export function ProfilePage() {
             </Typography>
           </div>
 
-          <Grid container spacing={3}>
+          <Grid container rowSpacing={3} columnSpacing={{ xs: 0, md: 3 }}>
             <Grid item xs={12} md={12}>
-              <Card sx={{ height: '100%', mr: { xs: 2, md: 0 } }}>
+              <Card sx={{ height: '100%' }}>
                 <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
                     <Avatar
@@ -332,7 +332,7 @@ export function ProfilePage() {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Card sx={{ height: '100%', mr: { xs: 2, md: 0 } }}>
+              <Card sx={{ height: '100%' }}>
                 <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Stack spacing={0}>
@@ -358,7 +358,7 @@ export function ProfilePage() {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Card sx={{ height: '100%', mr: { xs: 2, md: 0 } }}>
+              <Card sx={{ height: '100%' }}>
                 <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Stack spacing={0}>
@@ -434,7 +434,7 @@ export function ProfilePage() {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Card sx={{ height: '100%', mr: { xs: 2, md: 0 } }}>
+              <Card sx={{ height: '100%' }}>
                 <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Stack spacing={0}>

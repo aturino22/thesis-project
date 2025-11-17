@@ -16,7 +16,6 @@ import {
   DialogTitle,
   Divider,
   FormControl,
-  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -25,7 +24,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { FaArrowLeft, FaCaretDown, FaCaretUp, FaEllipsisH, FaEuroSign } from 'react-icons/fa'
+import { FaArrowLeft, FaCaretDown, FaCaretUp, FaEuroSign } from 'react-icons/fa'
 import { useAccountsQuery, useCryptoTradeMutation, useMarketAssetQuery } from '@/api/hooks'
 import { alpha, useTheme } from '@mui/material/styles'
 
@@ -272,7 +271,6 @@ export function MarketAssetPage() {
   const resolvedAccount =
     selectedAccountId && accounts.length > 0 ? accounts.find((account) => account.id === selectedAccountId) : accounts[0]
   const selectedAccountBalance = Number(resolvedAccount?.balance ?? 0)
-  const selectedAccountCurrency = resolvedAccount?.currency ?? 'EUR'
   const QUANTITY_DECIMALS = 6
   const MIN_ACCOUNT_RESIDUAL = 0.01
   const floorQuantity = (value: number) => {
