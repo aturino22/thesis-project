@@ -118,6 +118,48 @@ curl -X POST http://localhost:8000/otp/send \
 ```
 Per l'invio SMS impostare `"channel_code": "SMS"` e specificare `destination` con il numero simulato.
 
+### 4. Ricaricare il saldo di un conto
+Richiede lo scope `transactions:write`.
+```bash
+curl -X POST http://localhost:8000/accounts/bbbbbbbb-1111-2222-3333-555555555555/topup \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"amount": "150.00"}'
+```
+Il backend aggiorna il saldo e restituisce il conto aggiornato; la UI mostra un dialogo di ricarica con numero carta (16 cifre), scadenza `MM/YYYY` e CVV a tre cifre.
+
+### 5. Registrare un metodo di prelievo (IBAN)
+Richiede lo scope `payouts:write`.
+```bash
+curl -X POST http://localhost:8000/payouts/withdrawal-methods \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"account_holder_name": "Mario Rossi",
+           "iban": "IT60X0542811101000000123456",
+           "bic": "BCITITMM",
+           "bank_name": "Intesa Sanpaolo",
+           "is_default": true
+         }'
+```
+L'endpoint simula i controlli di intestatario/IBAN e salva il metodo come `VERIFIED`.
+
+### 6. Creare una richiesta di prelievo (blocca i fondi)
+Richiede lo scope `payouts:write`.
+```bash
+curl -X POST http://localhost:8000/payouts/withdrawals \
+     -H "Authorization: Bearer $ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"account_id": "bbbbbbbb-1111-2222-3333-555555555555",
+           "method_id": "aaaaaaaa-2222-3333-4444-555555555555",
+           "amount": "120.50",
+           "currency": "EUR"
+         }'
+```
+Il backend ricarica il saldo reale dal DB, calcola fee e sposta `amount+fee` da `available_amount` a `frozen_amount` (tabella `account_balances`) creando una riga in `withdrawals` con stato `PENDING`.
+
+
+
+
 ### Accesso al database da FastAPI
 ```python
 from fastapi import APIRouter, Depends
