@@ -107,6 +107,13 @@ const themeOptions = (mode: ColorVisionMode): CssVarsThemeOptions => ({
         },
       },
     },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        notchedOutline: {
+          borderColor: mode === 'daltonic' ? '#000000' : undefined,
+        },
+      },
+    },
   },
 })
 
