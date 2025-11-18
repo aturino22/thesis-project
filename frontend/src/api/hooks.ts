@@ -50,6 +50,20 @@ export type CryptoPosition = {
   updatedAt: string
 }
 
+export type WithdrawalMethod = {
+  id: string
+  userId: string
+  type: string
+  iban: string
+  bic: string | null
+  bankName: string | null
+  accountHolderName: string
+  isDefault: boolean
+  status: string
+  createdAt: string
+  verifiedAt: string | null
+}
+
 type AccountListResponse = {
   data: Array<{
     id: string
@@ -105,6 +119,20 @@ export type MarketAsset = {
   explorer_url?: string | null
 }
 
+type WithdrawalMethodApiResponse = {
+  id: string
+  user_id: string
+  type: string
+  iban: string
+  bic: string | null
+  bank_name: string | null
+  account_holder_name: string
+  is_default: boolean
+  status: string
+  created_at: string
+  verified_at: string | null
+}
+
 type MarketPricesResponse = {
   data: MarketAsset[]
 }
@@ -146,6 +174,7 @@ type MarketAssetDetailApiResponse = {
 }
 
 export const accountsKey = ['accounts']
+export const withdrawalMethodsKey = ['withdrawal-methods']
 export const transactionsKey = ['transactions']
 export const cryptoPositionsKey = ['crypto-positions']
 
@@ -232,6 +261,91 @@ export function useAccountTopUpMutation() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountsKey })
+    },
+  })
+}
+
+const mapWithdrawalMethod = (item: WithdrawalMethodApiResponse): WithdrawalMethod => ({
+  id: item.id,
+  userId: item.user_id,
+  type: item.type,
+  iban: item.iban,
+  bic: item.bic,
+  bankName: item.bank_name,
+  accountHolderName: item.account_holder_name,
+  isDefault: item.is_default,
+  status: item.status,
+  createdAt: item.created_at,
+  verifiedAt: item.verified_at,
+})
+
+export function useWithdrawalMethodsQuery(
+  options?: Partial<UseQueryOptions<WithdrawalMethod[], Error>> & { enabled?: boolean },
+) {
+  const apiClient = useApiClient()
+  const { enabled = true, ...queryOptions } = options ?? {}
+
+  return useQuery<WithdrawalMethod[], Error>({
+    queryKey: withdrawalMethodsKey,
+    enabled,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    ...queryOptions,
+    queryFn: async () => {
+      const response = await apiClient.request<WithdrawalMethodApiResponse[]>({
+        path: '/payouts/withdrawal-methods',
+      })
+      return response.map(mapWithdrawalMethod)
+    },
+  })
+}
+
+type CreateWithdrawalMethodPayload = {
+  accountHolderName: string
+  iban: string
+  bic?: string
+  bankName?: string
+  isDefault?: boolean
+}
+
+export function useCreateWithdrawalMethodMutation() {
+  const apiClient = useApiClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: CreateWithdrawalMethodPayload) => {
+      const response = await apiClient.request<WithdrawalMethodApiResponse>({
+        path: '/payouts/withdrawal-methods',
+        method: 'POST',
+        body: {
+          account_holder_name: payload.accountHolderName,
+          iban: payload.iban,
+          bic: payload.bic,
+          bank_name: payload.bankName,
+          is_default: payload.isDefault ?? false,
+        },
+      })
+      return mapWithdrawalMethod(response)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: withdrawalMethodsKey })
+    },
+  })
+}
+
+export function useDeleteWithdrawalMethodMutation() {
+  const apiClient = useApiClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (methodId: string) => {
+      await apiClient.request<void>({
+        path: `/payouts/withdrawal-methods/${methodId}`,
+        method: 'DELETE',
+      })
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: withdrawalMethodsKey })
     },
   })
 }
@@ -359,6 +473,60 @@ export function useCryptoTradeMutation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountsKey })
       void queryClient.invalidateQueries({ queryKey: cryptoPositionsKey })
+    },
+  })
+}
+
+type PasswordChangePayload = {
+  currentPassword: string
+  newPassword: string
+}
+
+export function usePasswordChangeMutation() {
+  const apiClient = useApiClient()
+  return useMutation({
+    mutationFn: async (payload: PasswordChangePayload) => {
+      await apiClient.request({
+        path: '/profile/password',
+        method: 'POST',
+        body: payload,
+      })
+    },
+  })
+}
+
+type ProfileUpdatePayload = {
+  firstName?: string
+  lastName?: string
+  email?: string
+}
+
+export function useProfileUpdateMutation() {
+  const apiClient = useApiClient()
+  return useMutation({
+    mutationFn: async (payload: ProfileUpdatePayload) => {
+      await apiClient.request({
+        path: '/profile',
+        method: 'PUT',
+        body: payload,
+      })
+    },
+  })
+}
+
+type ProfileDeletePayload = {
+  currentPassword: string
+}
+
+export function useProfileDeleteMutation() {
+  const apiClient = useApiClient()
+  return useMutation({
+    mutationFn: async (payload: ProfileDeletePayload) => {
+      await apiClient.request({
+        path: '/profile',
+        method: 'DELETE',
+        body: payload,
+      })
     },
   })
 }

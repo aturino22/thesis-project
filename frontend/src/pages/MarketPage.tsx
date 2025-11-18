@@ -18,9 +18,6 @@ import {
   Divider,
   FormControl,
   InputLabel,
-  List,
-  ListItem,
-  ListItemText,
   MenuItem,
   Select,
   Skeleton,
@@ -35,7 +32,7 @@ import {
   useMarketPricesQuery,
   type MarketAsset,
 } from '@/api/hooks'
-import { FaArrowLeft, FaCaretDown, FaCaretUp, FaEllipsisH, FaEuroSign } from 'react-icons/fa'
+import { FaCaretDown, FaCaretUp } from 'react-icons/fa'
 
 const formatPrice = (value: number) =>
   new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value)
@@ -50,7 +47,7 @@ export function MarketPage() {
   const assets = marketQuery.data ?? []
 
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [side, setSide] = useState<'buy' | 'sell'>('buy')
+  const [side] = useState<'buy' | 'sell'>('buy')
   const [selectedAsset, setSelectedAsset] = useState<MarketAsset | null>(null)
   const [selectedAccountId, setSelectedAccountId] = useState<string>('')
   const [quantity, setQuantity] = useState('')
@@ -62,17 +59,6 @@ export function MarketPage() {
     () => (selectedAsset ? selectedAsset.price * parsedQuantity : 0),
     [parsedQuantity, selectedAsset],
   )
-
-  const handleOpenDialog = (asset: MarketAsset, nextSide: 'buy' | 'sell') => {
-    setSelectedAsset(asset)
-    setSide(nextSide)
-    setQuantity('')
-    setFormError(null)
-    if (accounts.length > 0) {
-      setSelectedAccountId(accounts[0].id)
-    }
-    setDialogOpen(true)
-  }
 
   const handleCloseDialog = () => {
     setDialogOpen(false)

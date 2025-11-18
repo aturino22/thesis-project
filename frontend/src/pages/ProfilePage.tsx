@@ -32,6 +32,7 @@ import {
   useCreateWithdrawalMethodMutation,
   useDeleteWithdrawalMethodMutation,
   usePasswordChangeMutation,
+  useProfileDeleteMutation,
   useProfileUpdateMutation,
   useWithdrawalMethodsQuery,
   type WithdrawalMethod,
@@ -104,6 +105,7 @@ export function ProfilePage() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const passwordMutation = usePasswordChangeMutation()
   const profileUpdateMutation = useProfileUpdateMutation()
+  const profileDeleteMutation = useProfileDeleteMutation()
   const [profileForm, setProfileForm] = useState({
     firstName: '',
     lastName: '',
@@ -112,6 +114,9 @@ export function ProfilePage() {
   const [profileSuccess, setProfileSuccess] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const [withdrawalForm, setWithdrawalForm] = useState(defaultWithdrawalForm)
   const [withdrawalError, setWithdrawalError] = useState<string | null>(null)
@@ -248,6 +253,29 @@ export function ProfilePage() {
     setProfileError(null)
     setProfileSuccess(false)
     setIsEditingProfile(false)
+  }
+
+  const handleOpenDeleteDialog = () => {
+    setDeletePassword('')
+    setDeleteError(null)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleCloseDeleteDialog = () => {
+    if (!profileDeleteMutation.isPending) {
+      setIsDeleteDialogOpen(false)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    setDeleteError(null)
+    try {
+      await profileDeleteMutation.mutateAsync({ currentPassword: deletePassword })
+      setIsDeleteDialogOpen(false)
+      handleLogout()
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Password non corretta.')
+    }
   }
 
   const handleWithdrawalDelete = async (methodId: string) => {
@@ -420,25 +448,39 @@ export function ProfilePage() {
                   )}
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'space-between', px: 3, pb: 3, flexWrap: 'wrap', rowGap: 1 }}>
-                  {isEditingProfile ? (
-                    <Stack direction="row" spacing={1}>
-                      <Button
-                        variant="contained"
-                        startIcon={<FaEdit />}
-                        onClick={handleProfileSubmit}
-                        disabled={profileUpdateMutation.isPending}
-                      >
-                        {profileUpdateMutation.isPending ? 'Salvataggio...' : 'Salva profilo'}
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
+                    {isEditingProfile ? (
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                        <Button
+                          variant="contained"
+                          startIcon={<FaEdit />}
+                          onClick={handleProfileSubmit}
+                          disabled={profileUpdateMutation.isPending}
+                        >
+                          {profileUpdateMutation.isPending ? 'Salvataggio...' : 'Salva profilo'}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          onClick={handleProfileCancel}
+                          disabled={profileUpdateMutation.isPending}
+                        >
+                          Annulla
+                        </Button>
+                      </Stack>
+                    ) : (
+                      <Button variant="outlined" startIcon={<FaEdit />} onClick={handleProfileEditToggle}>
+                        Modifica profilo
                       </Button>
-                      <Button variant="outlined" onClick={handleProfileCancel} disabled={profileUpdateMutation.isPending}>
-                        Annulla
-                      </Button>
-                    </Stack>
-                  ) : (
-                    <Button variant="outlined" startIcon={<FaEdit />} onClick={handleProfileEditToggle}>
-                      Modifica profilo
+                    )}
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<FaTrashAlt />}
+                      onClick={handleOpenDeleteDialog}
+                    >
+                      Elimina profilo
                     </Button>
-                  )}
+                  </Stack>
                   <Button
                     variant="contained"
                     color="error"
@@ -708,6 +750,41 @@ export function ProfilePage() {
           </Grid>
         </Stack>
       </Container>
+
+      <Dialog open={isDeleteDialogOpen} onClose={handleCloseDeleteDialog} aria-labelledby="profile-delete-dialog-title">
+        <DialogTitle id="profile-delete-dialog-title">Elimina profilo</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <DialogContentText>
+            Inserisci la password attuale per confermare l'eliminazione del profilo. L'operazione è irreversibile.
+          </DialogContentText>
+          <TextField
+            label="Password"
+            type="password"
+            size="small"
+            value={deletePassword}
+            onChange={(event) => setDeletePassword(event.target.value)}
+            autoFocus
+          />
+          {deleteError ? (
+            <Alert severity="error" variant="outlined">
+              {deleteError}
+            </Alert>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog} disabled={profileDeleteMutation.isPending}>
+            Annulla
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleConfirmDelete}
+            disabled={profileDeleteMutation.isPending || deletePassword.length === 0}
+          >
+            {profileDeleteMutation.isPending ? 'Eliminazione...' : 'Elimina'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(methodPendingDeletion)}

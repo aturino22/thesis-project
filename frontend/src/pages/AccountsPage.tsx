@@ -85,7 +85,7 @@ export function AccountsPage() {
       setTopupError('Inserisci la scadenza nel formato MM/YYYY.')
       return
     }
-    const [expMonth, expYear] = cardExpiry.split('/')
+    const [expMonth] = cardExpiry.split('/')
     const monthNumber = Number(expMonth)
     if (monthNumber < 1 || monthNumber > 12) {
       setTopupError('Il mese di scadenza deve essere compreso tra 01 e 12.')

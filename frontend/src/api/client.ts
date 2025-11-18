@@ -52,7 +52,41 @@ export const createApiClient: ApiClientFactory = ({ getAccessToken }) => {
           // non-json response
         }
 
-        const error = new Error(fallbackMessage)
+        let message = fallbackMessage
+        if (typeof detail === 'string' && detail.trim().length > 0) {
+          message = detail
+        } else if (
+          detail &&
+          typeof detail === 'object' &&
+          'detail' in (detail as Record<string, unknown>)
+        ) {
+          const extracted = (detail as { detail?: unknown }).detail
+          if (typeof extracted === 'string' && extracted.trim().length > 0) {
+            message = extracted
+          } else if (Array.isArray(extracted) && extracted.length > 0) {
+            const messages = extracted
+              .map((item) => {
+                if (typeof item === 'string') {
+                  return item
+                }
+                if (
+                  item &&
+                  typeof item === 'object' &&
+                  'msg' in item &&
+                  typeof item.msg === 'string'
+                ) {
+                  return item.msg
+                }
+                return null
+              })
+              .filter((value): value is string => Boolean(value))
+            if (messages.length > 0) {
+              message = messages.join(' ')
+            }
+          }
+        }
+
+        const error = new Error(message)
         ;(error as Error & { status?: number; detail?: unknown }).status =
           response.status
         ;(error as Error & { status?: number; detail?: unknown }).detail = detail
