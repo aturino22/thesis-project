@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl, ConfigDict
+from pydantic import AliasChoices, BaseModel, Field, HttpUrl, ConfigDict
 
 
 class AccountOut(BaseModel):
@@ -217,13 +217,15 @@ class ProfileUpdateRequest(BaseModel):
 
     first_name: str | None = Field(
         default=None,
-        alias="firstName",
+        validation_alias=AliasChoices("firstName", "first_name"),
+        serialization_alias="firstName",
         max_length=64,
         description="Nome dell'utente.",
     )
     last_name: str | None = Field(
         default=None,
-        alias="lastName",
+        validation_alias=AliasChoices("lastName", "last_name"),
+        serialization_alias="lastName",
         max_length=64,
         description="Cognome dell'utente.",
     )
@@ -232,4 +234,17 @@ class ProfileUpdateRequest(BaseModel):
         alias="email",
         max_length=120,
         description="Indirizzo email preferito.",
+    )
+
+
+class ProfileDeletionRequest(BaseModel):
+    """Richiesta per eliminare definitivamente il profilo utente."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    current_password: str = Field(
+        ...,
+        alias="currentPassword",
+        min_length=1,
+        description="Password attuale richiesta per confermare l'operazione.",
     )

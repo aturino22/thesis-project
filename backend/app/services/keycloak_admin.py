@@ -115,6 +115,23 @@ class KeycloakAdminClient:
         if response.status_code not in (status.HTTP_204_NO_CONTENT, status.HTTP_200_OK):
             raise KeycloakAdminError(f"Keycloak ha rifiutato l'aggiornamento profilo: {response.text}")
 
+    async def delete_user(self, *, user_id: str) -> None:
+        """
+        Elimina definitivamente un utente dal realm configurato.
+        """
+        admin_token = await self._obtain_admin_token()
+        url = f"{self._admin_base_url}/users/{user_id}"
+        headers = {"Authorization": f"Bearer {admin_token}"}
+
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.delete(url, headers=headers)
+        except httpx.RequestError as exc:  # pragma: no cover
+            raise KeycloakAdminError("Errore di rete durante l'eliminazione dell'utente.") from exc
+
+        if response.status_code not in (status.HTTP_204_NO_CONTENT, status.HTTP_200_OK):
+            raise KeycloakAdminError(f"Keycloak ha rifiutato l'eliminazione: {response.text}")
+
     async def _obtain_admin_token(self) -> str:
         if self._admin_username and self._admin_password:
             data = {
