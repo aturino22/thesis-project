@@ -32,7 +32,22 @@
   **Motivo**: Allineare l’interfaccia alle esigenze degli utenti multi-conto, facilitando l’analisi.  
   **Benefici**: Consultazione più rapida, focalizzazione su subset rilevanti e percezione di controllo migliorata.
 
+- **Data**: 2025-11-15 - **Giorno di sviluppo**: Day 8  
+  **Decisione**: Introdurre la ricarica simulata del conto (POST /accounts/{id}/topup) con validazione di numero carta, scadenza e CVV nella UI.  
+  **Motivo**: Consentire agli utenti/tester di ripristinare i saldi senza script SQL e validare i flussi di accredito direttamente dall'interfaccia.  
+  **Benefici**: Esperienza completa deposito/acquisto/vendita, test automatizzati dedicati e riduzione delle operazioni manuali sul DB.
+- **Data**: 2025-11-15 - **Giorno di sviluppo**: Day 8  
+  **Decisione**: Arrotondare per difetto le quantita massime negli ordini crypto e semplificare le azioni della pagina asset.  
+  **Motivo**: Eliminare gli errori di validazione dovuti alle frazioni eccedenti e mantenere la UI focalizzata sulle operazioni principali.  
+  **Benefici**: Ordini senza falsi errori e interfaccia piu pulita/coerente con i pattern del resto dell'app.
+
 ## Database
+
+- **Data**: 2025-11-15 - **Giorno di sviluppo**: Day 8  
+  **Decisione**: Aggiungere le tabelle ccount_balances, withdrawal_methods e withdrawals per supportare il blocco fondi e la registrazione dei metodi bancari.  
+  **Motivo**: Preparare il backend all'esecuzione di richieste di prelievo con fondi congelati, audit e simulazione dei controlli AML.  
+  **Benefici**: Stato saldo chiaro (available/frozen), tracciamento dei payout e base dati consistente per futuri workflow asincroni e verifiche.
+
 - **Data**: 2025-10-22 – **Giorno di sviluppo**: Day 3  
   **Decisione**: Automatizzare migrazioni e seed con `python -m backend.db.manage {migrate|seed|bootstrap}`.  
   **Motivo**: Ridurre errori manuali e garantire coerenza tra ambienti.  
@@ -53,6 +68,12 @@
   **Benefici**: Setup riproducibile con un unico `docker compose up`, osservabilità immediata delle email via UI e canale SMS simulato centralizzato.
 
 ## Identity & Access Management
+
+- **Data**: 2025-11-15 - **Giorno di sviluppo**: Day 8  
+  **Decisione**: Introdurre gli scope payouts:read / payouts:write e le API /payouts/* per registrare conti bancari e creare richieste di prelievo con blocco fondi.  
+  **Motivo**: Estendere il perimetro di sicurezza oltre i trasferimenti interni e simulare il flusso di uscita verso IBAN verificati.  
+  **Benefici**: Endpoint separati, autorizzazioni dedicate e workflow pronto per integrazioni reali (micro-deposito, PSP, notifiche).
+
 - **Data**: 2025-11-02 – **Giorno di sviluppo**: Day 5  
   **Decisione**: Proteggere gli endpoint con token Keycloak e derivare `app.current_user_id` dalle claim (`user_id` oppure `sub`).  
   **Motivo**: Eliminare l’header temporaneo `X-User-Id` e garantire che ogni richiesta rispetti le policy RLS.  
@@ -67,3 +88,13 @@
   **Decisione**: Ampliare la suite `pytest` con casi OTP (successo email/SMS, failure microservizio, token/scope mancanti).  
   **Motivo**: Automatizzare la validazione dei flussi critici e rilevare regressioni senza test manuali.  
   **Benefici**: Copertura automatica multicanale, riduzione di falsi positivi in QA e documentazione viva degli scenari supportati.
+## UI & Branding
+- **Data**: 2025-11-04 - **Giorno di sviluppo**: Day 7  
+  **Decisione**: Aggiornare la palette principale delle viste crypto usando verde #1ED760, rosso #FF4D6D, grigio di testo #B0BEC5 e accento secondario #7C4DFF.  
+  **Motivo**: Ridurre l'affaticamento visivo dei precedenti colori neon (#00C853/#FF5252), migliorare la leggibilita dei testi secondari e dare coerenza alle call-to-action su sfondo scuro.  
+  **Benefici**: Contrasti piu equilibrati per utenti con sensibilita cromatica, chip/badge piu leggibili e un'esperienza visiva piu accogliente mantenendo il look & feel "dark finance".
+- **Data**: 2025-11-15 - **Giorno di sviluppo**: Day 8  
+  **Decisione**: Restyling completo della pagina di login Keycloak con hero, copy e alert coerenti col design della dashboard.  
+  **Motivo**: Evitare il cambio di contesto percepito dagli utenti al passaggio IdP → applicazione.  
+  **Benefici**: Branding consistente e messaging uniforme anche in caso di errori di autenticazione.
+
