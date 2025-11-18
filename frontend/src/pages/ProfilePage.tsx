@@ -32,6 +32,7 @@ import {
   useCreateWithdrawalMethodMutation,
   useDeleteWithdrawalMethodMutation,
   usePasswordChangeMutation,
+  useProfileUpdateMutation,
   useWithdrawalMethodsQuery,
   type WithdrawalMethod,
 } from '@/api/hooks'
@@ -41,6 +42,7 @@ type UserProfile = {
   preferred_username?: string
   name?: string
   given_name?: string
+  family_name?: string
   email?: string
   locale?: string
   sub?: string
@@ -101,6 +103,15 @@ export function ProfilePage() {
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const passwordMutation = usePasswordChangeMutation()
+  const profileUpdateMutation = useProfileUpdateMutation()
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+  })
+  const [profileSuccess, setProfileSuccess] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
 
   const [withdrawalForm, setWithdrawalForm] = useState(defaultWithdrawalForm)
   const [withdrawalError, setWithdrawalError] = useState<string | null>(null)
@@ -133,6 +144,18 @@ export function ProfilePage() {
       return { ...prev, accountHolderName: holderName }
     })
   }, [holderName])
+
+  const resetProfileForm = () => {
+    setProfileForm({
+      firstName: profileData.given_name ?? '',
+      lastName: profileData.family_name ?? '',
+      email: profileData.email ?? '',
+    })
+  }
+
+  useEffect(() => {
+    resetProfileForm()
+  }, [profileData.given_name, profileData.family_name, profileData.email])
 
   const handleLogout = () => {
     void auth
@@ -195,6 +218,36 @@ export function ProfilePage() {
         error instanceof Error ? error.message : 'Impossibile salvare il metodo. Verifica i dati inseriti.',
       )
     }
+  }
+
+  const handleProfileSubmit: MouseEventHandler<HTMLButtonElement> = async (event) => {
+    event.preventDefault()
+    setProfileError(null)
+    setProfileSuccess(false)
+    try {
+      await profileUpdateMutation.mutateAsync({
+        firstName: profileForm.firstName || undefined,
+        lastName: profileForm.lastName || undefined,
+        email: profileForm.email || undefined,
+      })
+      setProfileSuccess(true)
+      setIsEditingProfile(false)
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : 'Impossibile aggiornare il profilo.')
+    }
+  }
+
+  const handleProfileEditToggle = () => {
+    setProfileSuccess(false)
+    setProfileError(null)
+    setIsEditingProfile(true)
+  }
+
+  const handleProfileCancel = () => {
+    resetProfileForm()
+    setProfileError(null)
+    setProfileSuccess(false)
+    setIsEditingProfile(false)
   }
 
   const handleWithdrawalDelete = async (methodId: string) => {
@@ -275,50 +328,117 @@ export function ProfilePage() {
                         fontWeight: 600,
                       }}
                     >
-                      {displayName[0]?.toUpperCase() ?? 'U'}
+                      {(profileForm.firstName || displayName)[0]?.toUpperCase() ?? 'U'}
                     </Avatar>
                     <div>
                       <Typography variant="h5" fontWeight={700}>
-                        {displayName}
+                        {[profileForm.firstName, profileForm.lastName].filter(Boolean).join(' ') || displayName}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {profileData.email ?? 'Email non disponibile'}
+                        {profileForm.email || 'Email non disponibile'}
                       </Typography>
                     </div>
                   </Stack>
                   <Divider />
-                  <Stack spacing={1}>
-                    {profileFields.map((field) => {
-                      const value =
-                        typeof field.value === 'function'
-                          ? field.value(profileData, subject)
-                          : (profileData[field.value as keyof typeof profileData] as string | undefined)
-                      if (!value) {
-                        return null
-                      }
-                      return (
-                        <Box key={field.label}>
-                          <Typography variant="overline" color="text.secondary" letterSpacing={1}>
-                            {field.label.toUpperCase()}
-                          </Typography>
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              fontFamily: field.monospaced ? 'var(--mui-fontFamily-code)' : undefined,
-                              wordBreak: 'break-word',
-                            }}
-                          >
-                            {value}
-                          </Typography>
-                        </Box>
-                      )
-                    })}
-                  </Stack>
+                  {isEditingProfile ? (
+                    <Stack spacing={1.5}>
+                      <TextField
+                        label="Nome"
+                        size="small"
+                        value={profileForm.firstName}
+                        onChange={(event) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            firstName: event.target.value,
+                          }))
+                        }
+                      />
+                      <TextField
+                        label="Cognome"
+                        size="small"
+                        value={profileForm.lastName}
+                        onChange={(event) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            lastName: event.target.value,
+                          }))
+                        }
+                      />
+                      <TextField
+                        label="Email"
+                        type="email"
+                        size="small"
+                        value={profileForm.email}
+                        onChange={(event) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            email: event.target.value,
+                          }))
+                        }
+                      />
+                      {profileError ? (
+                        <Alert severity="error" variant="outlined">
+                          {profileError}
+                        </Alert>
+                      ) : null}
+                      {profileSuccess ? (
+                        <Alert severity="success" variant="outlined">
+                          Profilo aggiornato correttamente.
+                        </Alert>
+                      ) : null}
+                      <Typography variant="caption" color="text.secondary">
+                        Le modifiche saranno applicate al prossimo login oppure aggiornando manualmente il token.
+                      </Typography>
+                    </Stack>
+                  ) : (
+                    <Stack spacing={1}>
+                      <Box>
+                        <Typography variant="overline" color="text.secondary" letterSpacing={1}>
+                          NOME
+                        </Typography>
+                        <Typography variant="body1">
+                          {profileForm.firstName || 'Non impostato'}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="overline" color="text.secondary" letterSpacing={1}>
+                          COGNOME
+                        </Typography>
+                        <Typography variant="body1">
+                          {profileForm.lastName || 'Non impostato'}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="overline" color="text.secondary" letterSpacing={1}>
+                          EMAIL
+                        </Typography>
+                        <Typography variant="body1">
+                          {profileForm.email || 'Non disponibile'}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  )}
                 </CardContent>
-                <CardActions sx={{ justifyContent: 'flex-end', px: 3, pb: 3 }}>
-                  <Button variant="outlined" startIcon={<FaEdit />} disabled>
-                    Modifica profilo
-                  </Button>
+                <CardActions sx={{ justifyContent: 'space-between', px: 3, pb: 3, flexWrap: 'wrap', rowGap: 1 }}>
+                  {isEditingProfile ? (
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        variant="contained"
+                        startIcon={<FaEdit />}
+                        onClick={handleProfileSubmit}
+                        disabled={profileUpdateMutation.isPending}
+                      >
+                        {profileUpdateMutation.isPending ? 'Salvataggio...' : 'Salva profilo'}
+                      </Button>
+                      <Button variant="outlined" onClick={handleProfileCancel} disabled={profileUpdateMutation.isPending}>
+                        Annulla
+                      </Button>
+                    </Stack>
+                  ) : (
+                    <Button variant="outlined" startIcon={<FaEdit />} onClick={handleProfileEditToggle}>
+                      Modifica profilo
+                    </Button>
+                  )}
                   <Button
                     variant="contained"
                     color="error"
