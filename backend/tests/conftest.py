@@ -165,6 +165,7 @@ async def async_client(configure_oidc_env: None) -> AsyncIterator[AsyncClient]:
     async with app.router.lifespan_context(app):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url=TEST_BASE_URL) as client:
+            setattr(client, "app", app)
             yield client
 
 
