@@ -29,6 +29,7 @@
       OTP_SERVICE_BASE_URL: http://otp:9000
       OTP_SERVICE_TIMEOUT_SECONDS: 5
       OTP_CODE_TTL_SECONDS: 60
+      KEYCLOAK_BASE_URL: http://keycloak:8080
     volumes:
       - ../backend:/app/backend
     ports:
@@ -38,6 +39,29 @@
         condition: service_started
       postgres:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_APP_NAME: ${VITE_APP_NAME-Thesis Wallet}
+        VITE_APP_VERSION: ${VITE_APP_VERSION-dev}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL-http://localhost:8000}
+        VITE_OIDC_ISSUER: ${VITE_OIDC_ISSUER-http://localhost:8080/realms/thesis}
+        VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID-frontend}
+        VITE_OIDC_REDIRECT_URI: ${VITE_OIDC_REDIRECT_URI-http://localhost:3000/auth/callback}
+        VITE_OIDC_SILENT_REDIRECT_URI: ${VITE_OIDC_SILENT_REDIRECT_URI-http://localhost:3000/auth/silent-refresh}
+        VITE_OIDC_POST_LOGOUT_REDIRECT_URI: ${VITE_OIDC_POST_LOGOUT_REDIRECT_URI-http://localhost:3000/}
+        VITE_OIDC_SCOPE: "${VITE_OIDC_SCOPE-openid profile email thesis-access}"
+        VITE_ENABLE_MOCKED_AUTH: ${VITE_ENABLE_MOCKED_AUTH-}
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_started
+      keycloak:
+        condition: service_started
 
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.4
@@ -55,6 +79,7 @@
       - "8080:8080"
     volumes:
       - ./keycloak/realms:/opt/keycloak/data/import
+      - ./keycloak/themes:/opt/keycloak/themes
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,5 +127,3 @@
 
 volumes:
   postgres_data:
-
-
