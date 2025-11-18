@@ -4,9 +4,10 @@ DECLARE
     generated_name VARCHAR(120);
 BEGIN
     generated_name := COALESCE(
+        NULLIF(current_setting('app.current_username', true), ''),
         REGEXP_REPLACE(LOWER(NEW.email), '[^a-z0-9]+', '-', 'g'),
         NEW.id::text
-    );
+    ) || '-account';
 
     IF NOT EXISTS (SELECT 1 FROM accounts WHERE user_id = NEW.id) THEN
         INSERT INTO accounts (user_id, currency, balance, name)
