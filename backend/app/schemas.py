@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, ConfigDict
 
 
 class AccountOut(BaseModel):
@@ -189,3 +189,47 @@ class OtpSendResponse(BaseModel):
     status: str = Field(..., description="Esito dell'invio (es. sent)")
     channel_code: str = Field(..., description="Canale utilizzato per l'invio")
     expires_at: datetime = Field(..., description="Istante di scadenza della OTP")
+
+
+class PasswordChangeRequest(BaseModel):
+    """Payload richiesto per aggiornare la password utente su Keycloak."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    current_password: str = Field(
+        ...,
+        alias="currentPassword",
+        min_length=1,
+        description="Password attuale dell'utente",
+    )
+    new_password: str = Field(
+        ...,
+        alias="newPassword",
+        min_length=8,
+        description="Nuova password (minimo 8 caratteri).",
+    )
+
+
+class ProfileUpdateRequest(BaseModel):
+    """Informazioni aggiornabili del profilo utente."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    first_name: str | None = Field(
+        default=None,
+        alias="firstName",
+        max_length=64,
+        description="Nome dell'utente.",
+    )
+    last_name: str | None = Field(
+        default=None,
+        alias="lastName",
+        max_length=64,
+        description="Cognome dell'utente.",
+    )
+    email: str | None = Field(
+        default=None,
+        alias="email",
+        max_length=120,
+        description="Indirizzo email preferito.",
+    )

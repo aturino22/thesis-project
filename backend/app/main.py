@@ -13,6 +13,7 @@ from .routes import (
     crypto_positions_router,
     market_router,
     otp_router,
+    profile_router,
     transactions_router,
     withdrawals_router,
 )
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(market_router)
     app.include_router(transactions_router)
     app.include_router(otp_router)
+    app.include_router(profile_router)
     app.include_router(withdrawals_router)
 
     return app
