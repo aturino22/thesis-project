@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from psycopg import AsyncConnection
 
 from ..dependencies import AuthenticatedUser, get_authenticated_user
-from ..db import get_connection
+from ..db import get_connection, get_connection_with_rls
 from ..schemas import PasswordChangeRequest, ProfileDeletionRequest, ProfileUpdateRequest
 from ..services.keycloak_admin import (
     InvalidUserCredentialsError,
@@ -17,6 +17,7 @@ from ..services.keycloak_admin import (
     get_keycloak_admin_client,
     KeycloakAdminClient,
 )
+from ..mfa import require_recent_mfa
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -31,6 +32,7 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 async def change_password(
     payload: PasswordChangeRequest,
     user: AuthenticatedUser = Depends(get_authenticated_user),
+    _: AuthenticatedUser = Depends(require_recent_mfa()),
     keycloak_admin: KeycloakAdminClient = Depends(get_keycloak_admin_client),
 ) -> Response:
     """
@@ -100,8 +102,12 @@ async def update_profile(
     payload: ProfileUpdateRequest,
     user: AuthenticatedUser = Depends(get_authenticated_user),
     keycloak_admin: KeycloakAdminClient = Depends(get_keycloak_admin_client),
+    conn: AsyncConnection = Depends(get_connection_with_rls),
 ) -> Response:
     """Aggiorna parte del profilo utente utilizzando l'admin API di Keycloak."""
+    if payload.email:
+        mfa_dependency = require_recent_mfa()
+        await mfa_dependency(conn=conn, user=user)
     try:
         await keycloak_admin.update_user_profile(
             user_id=user.subject,

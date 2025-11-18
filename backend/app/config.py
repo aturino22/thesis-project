@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     otp_service_base_url: str | None = None
     otp_service_timeout_seconds: float = 5.0
     otp_code_ttl_seconds: int = 60
+    otp_code_secret: str = "change-me"
+    otp_max_attempts: int = 5
+    mfa_session_ttl_seconds: int = 300
     cors_allowed_origins: str = "http://localhost:5173,http://localhost:3000"
     coincap_base_url: str = "https://api.coincap.io/v2"
     coincap_api_key: str | None = None
