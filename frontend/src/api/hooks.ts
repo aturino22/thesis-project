@@ -238,7 +238,6 @@ export const accountTopupsKey = ['account-topups']
 export const withdrawalsKey = ['withdrawals']
 export const transactionsKey = ['transactions']
 export const cryptoPositionsKey = ['crypto-positions']
-export const withdrawalMethodsKey = ['withdrawal-methods']
 
 type CryptoOrderResponse = {
   account: {
@@ -265,46 +264,6 @@ type CryptoOrderResponse = {
     updated_at: string
   } | null
 }
-
-type WithdrawalMethodApiResponse = {
-  id: string
-  user_id: string
-  type: string
-  iban: string
-  bic: string | null
-  bank_name: string | null
-  account_holder_name: string
-  is_default: boolean
-  status: string
-  created_at: string
-  verified_at: string | null
-}
-
-export type WithdrawalMethod = {
-  id: string
-  type: string
-  iban: string
-  bic: string | null
-  bankName: string | null
-  accountHolderName: string
-  isDefault: boolean
-  status: string
-  createdAt: string
-  verifiedAt: string | null
-}
-
-const mapWithdrawalMethod = (method: WithdrawalMethodApiResponse): WithdrawalMethod => ({
-  id: method.id,
-  type: method.type,
-  iban: method.iban,
-  bic: method.bic,
-  bankName: method.bank_name,
-  accountHolderName: method.account_holder_name,
-  isDefault: method.is_default,
-  status: method.status,
-  createdAt: method.created_at,
-  verifiedAt: method.verified_at,
-})
 
 function parseCurrencyAmount(value: string | number | null | undefined): number {
   if (value == null) {
@@ -726,24 +685,6 @@ export function useCryptoTradeMutation() {
   })
 }
 
-type PasswordChangePayload = {
-  currentPassword: string
-  newPassword: string
-}
-
-export function usePasswordChangeMutation() {
-  const apiClient = useApiClient()
-  return useMutation({
-    mutationFn: async (payload: PasswordChangePayload) => {
-      await apiClient.request({
-        path: '/profile/password',
-        method: 'POST',
-        body: payload,
-      })
-    },
-  })
-}
-
 type ProfileUpdatePayload = {
   firstName?: string
   lastName?: string
@@ -853,83 +794,6 @@ export function useMarketAssetQuery(
         position,
         transactions,
       }
-    },
-  })
-}
-
-export function useWithdrawalMethodsQuery(
-  options?: Partial<UseQueryOptions<WithdrawalMethod[], Error>> & { enabled?: boolean },
-) {
-  const apiClient = useApiClient()
-  const { enabled = true, ...queryOptions } = options ?? {}
-
-  return useQuery<WithdrawalMethod[], Error>({
-    queryKey: withdrawalMethodsKey,
-    enabled,
-    staleTime: 120_000,
-    refetchOnWindowFocus: false,
-    ...queryOptions,
-    queryFn: async () => {
-      const response = await apiClient.request<WithdrawalMethodApiResponse[]>({
-        path: '/payouts/withdrawal-methods',
-      })
-      return response.map(mapWithdrawalMethod)
-    },
-  })
-}
-
-type CreateWithdrawalMethodPayload = {
-  accountHolderName: string
-  iban: string
-  bic?: string
-  bankName?: string
-  isDefault?: boolean
-}
-
-export function useCreateWithdrawalMethodMutation() {
-  const apiClient = useApiClient()
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      accountHolderName,
-      iban,
-      bic,
-      bankName,
-      isDefault,
-    }: CreateWithdrawalMethodPayload) => {
-      const response = await apiClient.request<WithdrawalMethodApiResponse>({
-        path: '/payouts/withdrawal-methods',
-        method: 'POST',
-        body: {
-          account_holder_name: accountHolderName,
-          iban,
-          bic,
-          bank_name: bankName,
-          is_default: Boolean(isDefault),
-        },
-      })
-      return mapWithdrawalMethod(response)
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: withdrawalMethodsKey })
-    },
-  })
-}
-
-export function useDeleteWithdrawalMethodMutation() {
-  const apiClient = useApiClient()
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (methodId: string) => {
-      await apiClient.request<void>({
-        path: `/payouts/withdrawal-methods/${methodId}`,
-        method: 'DELETE',
-      })
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: withdrawalMethodsKey })
     },
   })
 }
