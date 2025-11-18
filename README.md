@@ -15,8 +15,7 @@ Applicazione full-stack (backend FastAPI + future frontend React) che offre cont
 6. [Architettura e documentazione tecnica](#architettura-e-documentazione-tecnica)
 7. [Limitazioni, problemi noti e TODO](#limitazioni-problemi-noti-e-todo)
 8. [Come contribuire](#come-contribuire)
-9. [Licenza](#licenza)
-10. [Contatti e crediti](#contatti-e-crediti)
+9. [Contatti e crediti](#contatti-e-crediti)
 
 ## Installazione
 1. **Clona il repository**
@@ -180,6 +179,12 @@ La dipendenza `get_connection_with_rls` imposta `app.current_user_id` nella sess
 ## Configurazione
 - **Variabili d'ambiente principali (`.env`)**
   ```
+  # App
+  APP_NAME=Fintech Wallet
+  ENVIRONMENT=development
+  DEBUG=true
+
+  # Database
   DB_HOST=postgres            # usare 127.0.0.1 se si avvia tutto senza Docker
   DB_PORT=5432
   DB_NAME=thesis_fintech
@@ -188,21 +193,56 @@ La dipendenza `get_connection_with_rls` imposta `app.current_user_id` nella sess
   DB_POOL_MIN_SIZE=1
   DB_POOL_MAX_SIZE=10
   DB_POOL_TIMEOUT=30.0
+
+  # OIDC / Keycloak
   OIDC_ENABLED=true
   OIDC_ISSUER=http://localhost:8080/realms/thesis
   OIDC_CLIENT_ID=frontend
-  OIDC_AUDIENCE=backend
+  #OIDC_AUDIENCE=backend
   OIDC_JWKS_URL=http://localhost:8080/realms/thesis/protocol/openid-connect/certs
   OIDC_USER_ID_CLAIM=user_id
   OIDC_JWKS_CACHE_TTL_SECONDS=300
   OIDC_CLOCK_SKEW_SECONDS=60
-  OIDC_DEV_DEFAULT_SCOPES=accounts:read transactions:read transactions:write
+  OIDC_DEV_DEFAULT_SCOPES=accounts:read transactions:read transactions:write crypto:read payouts:read payouts:write
+
+  KEYCLOAK_BASE_URL=http://localhost:8080        # nei container usare http://keycloak:8080
+  KEYCLOAK_REALM=thesis
+  KEYCLOAK_ADMIN_CLIENT_ID=backend
+  KEYCLOAK_ADMIN_CLIENT_SECRET=backend-secret
+  KEYCLOAK_PUBLIC_CLIENT_ID=frontend
+  KEYCLOAK_ADMIN_USERNAME=admin
+  KEYCLOAK_ADMIN_PASSWORD=admin
+  KEYCLOAK_ADMIN_TOKEN_CLIENT_ID=admin-cli
+  KEYCLOAK_ADMIN_TOKEN_REALM=master
+  KC_ADMIN_USER=admin
+  KC_ADMIN_PASSWORD=admin
+
+  # OTP service / email / SMS
   OTP_SERVICE_BASE_URL=http://localhost:9000
   OTP_SERVICE_TIMEOUT_SECONDS=5.0
   OTP_CODE_TTL_SECONDS=60
+  OTP_CODE_SECRET=change-me
+  OTP_MAX_ATTEMPTS=5
+  MFA_SESSION_TTL_SECONDS=300
+  OTP_EMAIL_FROM=no-reply@localhost.localdomain
+  OTP_SMTP_HOST=mailpit
+  OTP_SMTP_PORT=1025
+  OTP_SMTP_USERNAME=
+  OTP_SMTP_PASSWORD=
+  OTP_SMTP_USE_TLS=true
+  OTP_SMTP_USE_SSL=false
+  OTP_SMS_LOG_FILE=
+  OTP_SMS_SENDER_ID=Fintech
+
+  # Market data + CORS
+  COINCAP_BASE_URL=https://rest.coincap.io/v3
+  COINCAP_API_KEY=<<api-key>>
+  CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
   ```
 - **Autenticazione**: con `OIDC_ENABLED=true` il backend valida i token JWT emessi da Keycloak, propaga `user_id` nelle policy RLS e richiede gli scope `accounts:read` / `transactions:*`.  
 - **Microservizio OTP**: il servizio FastAPI (porta 9000) invia email reali se configurato con `OTP_SMTP_*` e scrive gli SMS simulati a log (`OTP_SMS_LOG_FILE`).  
+- **CORS**: `CORS_ALLOWED_ORIGINS` è una lista CSV di origini autorizzate (ad es. `http://localhost:5173` per Vite e `http://localhost:3000` per React/CRA). Deve essere valorizzata nell'`.env` del backend o nei secrets di deployment.  
+- **Naming conti**: ogni nuovo utente autenticato crea automaticamente il proprio conto (trigger `create_default_account_for_user`) usando `<username>-account`, garantendo la relazione 1-1 utenti/conti.  
 - **Dipendenze esterne**: PostgreSQL 16 via Docker Compose; in roadmap Keycloak, gateway NGINX, servizi OTP reali.  
 - **File da consultare**: `infra/docker-compose.yml`, `docs/openapi.yaml`, `backend/db/er/`.
 
@@ -216,8 +256,11 @@ La dipendenza `get_connection_with_rls` imposta `app.current_user_id` nella sess
 - **Flusso password grant per test**: comando `curl` mostrato negli esempi; in produzione usare PKCE/Authorization Code tramite frontend.
 - **Aggiornamenti manuali rapidi**:
   - `docker compose -f infra/docker-compose.yml exec keycloak /opt/keycloak/bin/kcadm.sh ...` per gestire utenti/mapper da CLI.
-  - `Realm Settings → User profile` definisce l'attributo custom `user_id`.
+  - `Realm Settings ? User profile` definisce l'attributo custom `user_id`.
   - I nuovi utenti devono valorizzare `user_id` per passare le required action.
+- **Endpoint profilo**:
+  - `POST /profile/password` verifica la password corrente tramite il client `backend` e la aggiorna via API admin (richiede le variabili `KEYCLOAK_ADMIN_*`).
+  - `PUT /profile` aggiorna nome/cognome/email inviando solo i campi valorizzati e restituisce `204` in caso di successo.
 
 ## Architettura e documentazione tecnica
 - **Struttura repo**
@@ -240,9 +283,6 @@ La dipendenza `get_connection_with_rls` imposta `app.current_user_id` nella sess
 
 ## Limitazioni, problemi noti e TODO
 - Microservizio OTP email/SMS in lavorazione, da integrare con gli endpoint di backend.
-- Frontend React/Vite non ancora implementato; il prototipo è backend-only.
-- Mancano pipeline CI/CD e test di hardening (rate limiting, headers di sicurezza su gateway).
-- Sessione di test end-to-end da completare (vedi `docs/test-plan-saturday.md`).
 
 ## Come contribuire
 1. Fork del repository e creazione di un branch tematico.
@@ -252,9 +292,6 @@ La dipendenza `get_connection_with_rls` imposta `app.current_user_id` nella sess
    - Motivazione della modifica.
    - Impatto su migrazioni/configurazioni.
    - Istruzioni di test/verifica.
-
-## Licenza
-Licenza in definizione: il file `LICENSE` verrà aggiunto prima della pubblicazione pubblica. Nel frattempo l’uso è limitato al progetto di tesi dell’autore.
 
 ## Contatti e crediti
 - **Autore**: Alessandro Turino — <turino.alessandro2201@gmail.com>

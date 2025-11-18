@@ -36,7 +36,6 @@ flowchart LR
   BE --> OTEL[[OpenTelemetry]]:::obs
   OTEL --> LOGS[(Loki/ELK)]:::obs
   OTEL --> METRICS[(Prometheus)]:::obs
-  METRICS --> GRAF[(Grafana)]:::obs
 ```
 
 ### 🔹 Stack tecnologico
@@ -47,7 +46,7 @@ flowchart LR
 | **Database** | PostgreSQL + pgcrypto + RLS | Dati persistenti, cifratura e sicurezza per riga |
 | **Identity Provider** | Keycloak (OIDC/OAuth2) | Gestione utenti, MFA e ruoli |
 | **API Gateway** | NGINX | Reverse proxy, rate limiting e headers di sicurezza |
-| **Observability** | Prometheus + Grafana + Loki | Metriche, dashboard e logging strutturato |
+| **Observability** | Prometheus + Loki | Metriche e logging strutturato |
 | **DevOps** | Docker Compose + GitHub Actions | Deploy e CI/CD integrati |
 
 ---
@@ -117,7 +116,6 @@ docker compose up -d --build
 | Keycloak | 8081 | Identity Provider |
 | Gateway | 8080 | Reverse proxy + CORS |
 | PostgreSQL | 5432 | Database |
-| Grafana | 3000 | Dashboard metriche |
 
 ---
 
