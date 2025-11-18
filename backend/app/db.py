@@ -69,6 +69,49 @@ async def set_current_user_id(conn: AsyncConnection, user_id: str) -> None:
     )
 
 
+async def ensure_user_record(conn: AsyncConnection, user: AuthenticatedUser) -> None:
+    """Crea il record utente (e quindi l'account) se non presente."""
+    async with conn.cursor() as cur:
+        await cur.execute("SELECT 1 FROM users WHERE id = %s;", (user.user_id,))
+        exists = await cur.fetchone()
+    if exists:
+        return
+
+    email = user.email or str(user.claims.get("email") or f"{user.user_id}@unknown.local")
+    username_claim = (
+        str(
+            user.claims.get("preferred_username")
+            or user.claims.get("username")
+            or email.split("@")[0]
+            or user.user_id
+        )
+        .strip()
+        .lower()
+    )
+    first_name = (
+        str(
+            user.claims.get("given_name")
+            or user.claims.get("name")
+            or email.split("@")[0]
+            or "Utente"
+        )
+    ).strip() or "Utente"
+    last_name = str(user.claims.get("family_name") or "").strip() or "-"
+
+    async with conn.cursor() as cur:
+        await cur.execute("SELECT set_config('app.current_username', %s, true);", (username_claim,))
+        await cur.execute(
+            """
+            INSERT INTO users (id, email, nome, cognome, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            ON CONFLICT (id) DO NOTHING;
+            """,
+            (user.user_id, email, first_name, last_name),
+        )
+        await cur.execute("SELECT set_config('app.current_username', '', true);")
+    await conn.commit()
+
+
 def create_pool(settings: Settings) -> AsyncConnectionPool:
     """
     Inizializza il pool di connessioni asincrone utilizzando le impostazioni applicative.
@@ -152,5 +195,6 @@ async def get_connection_with_rls(
     """
     pool: AsyncConnectionPool = request.app.state.db_pool
     async with pool.connection() as connection:
+        await ensure_user_record(connection, user)
         await set_current_user_id(connection, user.user_id)
         yield connection

@@ -33,6 +33,17 @@ class AccountTopUpRequest(BaseModel):
     amount: Decimal = Field(..., gt=Decimal("0"), description="Importo positivo da accreditare sul conto")
 
 
+class AccountTopUpOut(BaseModel):
+    """Record che descrive una singola ricarica simulata."""
+
+    id: UUID
+    user_id: UUID
+    account_id: UUID
+    amount: Decimal
+    currency: str
+    created_at: datetime
+
+
 class TransactionOut(BaseModel):
     """Rappresenta una transazione legata a un conto dell'utente."""
 
