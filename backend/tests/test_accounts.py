@@ -41,3 +41,25 @@ async def test_account_topup_increases_balance(async_client, auth_headers_factor
     payload = response.json()
     assert payload["id"] == DEFAULT_ACCOUNT_ID
     assert Decimal(payload["balance"]) == Decimal("150.00")
+
+
+@pytest.mark.asyncio
+async def test_account_topup_history_exposes_records(async_client, auth_headers_factory):
+    """La cronologia delle ricariche include l'ultima operazione effettuata."""
+    topup_headers = auth_headers_factory(user_id=DEFAULT_USER_ID, scopes={"transactions:write"})
+    response = await async_client.post(
+        f"/accounts/{DEFAULT_ACCOUNT_ID}/topup",
+        headers=topup_headers,
+        json={"amount": "25.00"},
+    )
+    assert response.status_code == 200, response.text
+
+    history_headers = auth_headers_factory(user_id=DEFAULT_USER_ID, scopes={"transactions:read"})
+    history = await async_client.get("/accounts/topups", headers=history_headers)
+    assert history.status_code == 200, history.text
+    payload = history.json()
+    assert isinstance(payload, list)
+    assert any(
+        record["account_id"] == DEFAULT_ACCOUNT_ID and Decimal(record["amount"]) == Decimal("25.00")
+        for record in payload
+    )

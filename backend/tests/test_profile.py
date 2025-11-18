@@ -17,6 +17,8 @@ DELETE_TEST_USER_ID = "eeeeeeee-1111-2222-3333-999999999999"
 
 def _ensure_user_with_account(conn, user_id: str, email: str) -> None:
     with conn.cursor() as cur:
+        username = email.split("@")[0]
+        cur.execute("SELECT set_config('app.current_username', %s, true);", (username,))
         cur.execute(
             """
             INSERT INTO users (id, email, nome, cognome, created_at)
@@ -33,6 +35,7 @@ def _ensure_user_with_account(conn, user_id: str, email: str) -> None:
             """,
             (user_id, email.split("@")[0]),
         )
+        cur.execute("SELECT set_config('app.current_username', '', true);")
     conn.commit()
 
 

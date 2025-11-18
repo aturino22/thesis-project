@@ -14,6 +14,7 @@ USERS = [
         "cognome": "Turino",
         "birthday": date(1996, 1, 22),
         "preferred_otp_channel": "22222222-2222-2222-2222-222222222222",
+        "username": "demo-user",
     }
 ]
 
@@ -45,6 +46,8 @@ def seed() -> None:
     with get_connection() as conn:
         with conn.cursor() as cur:
             for user in USERS:
+                username = user.get("username") or user["email"].split("@")[0]
+                cur.execute("SELECT set_config('app.current_username', %s, true);", (username,))
                 cur.execute(
                     """
                     INSERT INTO users (id, email, nome, cognome, birthday, preferred_otp_channel, created_at)
@@ -61,6 +64,7 @@ def seed() -> None:
                         "created_at": now,
                     },
                 )
+                cur.execute("SELECT set_config('app.current_username', '', true);")
     print("Seeded users.")
 
 

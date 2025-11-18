@@ -13,6 +13,8 @@ MIGRATION_FILES: List[Path] = [
     MIGRATIONS_DIR / "accounts_migration_21102025.sql",
     MIGRATIONS_DIR / "accounts_auto_creation_migration_18112025.sql",
     MIGRATIONS_DIR / "accounts_rls_migration_25102025.sql",
+    MIGRATIONS_DIR / "account_topups_migration_18112025.sql",
+    MIGRATIONS_DIR / "account_topups_rls_migration_18112025.sql",
     MIGRATIONS_DIR / "account_balances_migration_15112025.sql",
     MIGRATIONS_DIR / "transactions_migration_21102025.sql",
     MIGRATIONS_DIR / "transactions_rls_migration_25102025.sql",
