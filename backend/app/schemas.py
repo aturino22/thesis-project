@@ -192,14 +192,35 @@ class OtpSendRequest(BaseModel):
     metadata: Optional[dict[str, str]] = Field(
         default=None, description="Metadati opzionali inoltrati al servizio OTP."
     )
+    context: Optional[str] = Field(
+        default="default",
+        max_length=64,
+        description="Contesto logico della verifica (es. login, payout).",
+    )
 
 
 class OtpSendResponse(BaseModel):
     """Risposta generata dopo aver inviato una OTP."""
 
     status: str = Field(..., description="Esito dell'invio (es. sent)")
+    challenge_id: UUID = Field(..., description="Identificativo della sfida OTP generata.")
     channel_code: str = Field(..., description="Canale utilizzato per l'invio")
     expires_at: datetime = Field(..., description="Istante di scadenza della OTP")
+
+
+class OtpVerifyRequest(BaseModel):
+    """Richiesta per la verifica di una OTP precedentemente inviata."""
+
+    challenge_id: UUID = Field(..., description="Identificativo della sfida OTP.")
+    code: str = Field(..., min_length=4, max_length=10, description="Codice monouso ricevuto dall'utente.")
+
+
+class OtpVerifyResponse(BaseModel):
+    """Risposta restituita dopo aver verificato correttamente la OTP."""
+
+    status: str = Field(..., description="Stato della verifica (es. verified).")
+    verified_at: datetime = Field(..., description="Istante di verifica della sfida.")
+    expires_at: datetime = Field(..., description="Scadenza della sessione MFA ottenuta.")
 
 
 class PasswordChangeRequest(BaseModel):
