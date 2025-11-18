@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { HomePage } from '@/pages/HomePage'
 import { AuthCallbackPage } from '@/routes/AuthCallbackPage'
 import { SilentRenewPage } from '@/routes/SilentRenewPage'
+import { LogoutRedirectPage } from '@/routes/LogoutRedirectPage'
 import { NotFoundPage } from '@/routes/NotFoundPage'
 import { appConfig } from '@/config/appConfig'
 import { AppLayout } from '@/layouts/AppLayout'
@@ -26,6 +27,7 @@ export function App() {
       </Route>
       <Route path={appConfig.routes.authCallback} element={<AuthCallbackPage />} />
       <Route path={appConfig.routes.silentRefresh} element={<SilentRenewPage />} />
+      <Route path={appConfig.routes.postLogoutRedirect} element={<LogoutRedirectPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

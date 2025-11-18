@@ -265,6 +265,33 @@ const metadataDocument = {
 } as const
 const staticMetadata = metadataDocument as unknown as Partial<OidcMetadata>
 
+const normalizeTargetOrigin = (url: string) => {
+  try {
+    const parsed = new URL(url)
+    return { origin: parsed.origin, pathname: parsed.pathname || '/' }
+  } catch {
+    return { origin: issuer, pathname: '/' }
+  }
+}
+
+const logoutTarget = normalizeTargetOrigin(oidc.postLogoutRedirectUri)
+
+const isOnLogoutCallback = () => {
+  if (typeof window === 'undefined') {
+    return false
+  }
+  const { origin, pathname } = window.location
+  return origin === logoutTarget.origin && pathname === logoutTarget.pathname
+}
+
+const applyPostLogoutRedirect = () => {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.history.replaceState({}, document.title, logoutTarget.pathname)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
 const baseSettings: UserManagerSettings = {
   authority: issuer,
   client_id: oidc.clientId,
@@ -319,5 +346,9 @@ export const oidcConfig: AuthProviderProps = {
     const target = resolveRedirectPath(user)
     window.history.replaceState({}, document.title, target)
     window.dispatchEvent(new PopStateEvent('popstate'))
+  },
+  matchSignoutCallback: () => isOnLogoutCallback(),
+  onSignoutCallback: async () => {
+    applyPostLogoutRedirect()
   },
 }
