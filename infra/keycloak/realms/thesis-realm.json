@@ -212,16 +212,20 @@
       "secret": "",
       "redirectUris": [
         "http://localhost:5173/*",
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "https://fintechwallet.it/*",
+        "https://www.fintechwallet.it/*"
       ],
       "webOrigins": [
         "http://localhost:5173",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "https://fintechwallet.it",
+        "https://www.fintechwallet.it"
       ],
       "protocol": "openid-connect",
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5173/*\nhttp://localhost:3000/*"
+        "post.logout.redirect.uris": "http://localhost:5173/*\nhttps://fintechwallet.it/*\nhttps://www.fintechwallet.it/*\nhttp://localhost:3000/*"
       },
       "defaultClientScopes": [
         "web-origins",
