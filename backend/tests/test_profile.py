@@ -12,6 +12,40 @@ from backend.app.services.keycloak_admin import (
 )
 
 DEFAULT_USER_ID = "aaaaaaaa-1111-2222-3333-444444444444"
+DELETE_TEST_USER_ID = "eeeeeeee-1111-2222-3333-999999999999"
+
+
+def _ensure_user_with_account(conn, user_id: str, email: str) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO users (id, email, nome, cognome, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            ON CONFLICT (id) DO NOTHING;
+            """,
+            (user_id, email, "Test", "User"),
+        )
+        cur.execute("DELETE FROM accounts WHERE user_id = %s;", (user_id,))
+        cur.execute(
+            """
+            INSERT INTO accounts (user_id, currency, balance, name, created_at)
+            VALUES (%s, 'EUR', 0, %s, NOW());
+            """,
+            (user_id, email.split("@")[0]),
+        )
+    conn.commit()
+
+
+def _user_exists(conn, user_id: str) -> bool:
+    with conn.cursor() as cur:
+        cur.execute("SELECT 1 FROM users WHERE id = %s;", (user_id,))
+        return cur.fetchone() is not None
+
+
+def _cleanup_user(conn, user_id: str) -> None:
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM users WHERE id = %s;", (user_id,))
+    conn.commit()
 
 
 class StubKeycloakAdmin:
@@ -19,9 +53,11 @@ class StubKeycloakAdmin:
         self.verify_calls: list[tuple[str, str]] = []
         self.update_calls: list[tuple[str, str]] = []
         self.profile_calls: list[dict[str, str | None]] = []
+        self.delete_calls: list[str] = []
         self.raise_on_verify: Exception | None = None
         self.raise_on_update: Exception | None = None
         self.raise_on_profile: Exception | None = None
+        self.raise_on_delete: Exception | None = None
 
     async def verify_user_credentials(self, *, username: str, password: str) -> None:
         self.verify_calls.append((username, password))
@@ -41,6 +77,11 @@ class StubKeycloakAdmin:
         )
         if self.raise_on_profile:
             raise self.raise_on_profile
+
+    async def delete_user(self, *, user_id: str) -> None:
+        self.delete_calls.append(user_id)
+        if self.raise_on_delete:
+            raise self.raise_on_delete
 
 
 @pytest.mark.asyncio
@@ -176,3 +217,54 @@ async def test_update_profile_with_partial_payload(async_client, auth_headers_fa
     assert stub.profile_calls == [
         {"user_id": DEFAULT_USER_ID, "first_name": "OnlyName", "last_name": None, "email": None}
     ]
+
+
+@pytest.mark.asyncio
+async def test_delete_profile_removes_user(async_client, auth_headers_factory, sync_connection):
+    stub = StubKeycloakAdmin()
+    async_client.app.dependency_overrides[get_keycloak_admin_client] = lambda: stub
+    _ensure_user_with_account(sync_connection, DELETE_TEST_USER_ID, "delete.user@example.com")
+
+    headers = auth_headers_factory(
+        user_id=DELETE_TEST_USER_ID,
+        extra_claims={"sub": DELETE_TEST_USER_ID, "preferred_username": "delete-user"},
+    )
+
+    response = await async_client.request(
+        "DELETE",
+        "/profile",
+        headers=headers,
+        json={"currentPassword": "PasswordAttuale!"},
+    )
+
+    async_client.app.dependency_overrides.clear()
+    assert response.status_code == 204
+    assert stub.verify_calls == [("delete-user", "PasswordAttuale!")]
+    assert stub.delete_calls == [DELETE_TEST_USER_ID]
+    assert not _user_exists(sync_connection, DELETE_TEST_USER_ID)
+    _cleanup_user(sync_connection, DELETE_TEST_USER_ID)
+
+
+@pytest.mark.asyncio
+async def test_delete_profile_with_wrong_password(async_client, auth_headers_factory, sync_connection):
+    stub = StubKeycloakAdmin()
+    stub.raise_on_verify = InvalidUserCredentialsError("invalid")
+    async_client.app.dependency_overrides[get_keycloak_admin_client] = lambda: stub
+    _ensure_user_with_account(sync_connection, DELETE_TEST_USER_ID, "delete.user@example.com")
+
+    headers = auth_headers_factory(
+        user_id=DELETE_TEST_USER_ID,
+        extra_claims={"sub": DELETE_TEST_USER_ID, "preferred_username": "delete-user"},
+    )
+
+    response = await async_client.request(
+        "DELETE",
+        "/profile",
+        headers=headers,
+        json={"currentPassword": "sbagliata"},
+    )
+
+    async_client.app.dependency_overrides.clear()
+    assert response.status_code == 400
+    assert _user_exists(sync_connection, DELETE_TEST_USER_ID)
+    _cleanup_user(sync_connection, DELETE_TEST_USER_ID)
