@@ -9,7 +9,6 @@ import psycopg
 
 ACCOUNTS = [
     {
-        "id": "bbbbbbbb-1111-2222-3333-555555555555",
         "user_id": "aaaaaaaa-1111-2222-3333-444444444444",
         "currency": "EUR",
         "balance": Decimal("1000.00"),
@@ -47,9 +46,9 @@ def seed() -> None:
             for account in ACCOUNTS:
                 cur.execute(
                     """
-                    INSERT INTO accounts (id, user_id, currency, balance, name, created_at)
-                    VALUES (%(id)s, %(user_id)s, %(currency)s, %(balance)s, %(name)s, %(created_at)s)
-                    ON CONFLICT (id) DO UPDATE
+                    INSERT INTO accounts (user_id, currency, balance, name, created_at)
+                    VALUES (%(user_id)s, %(currency)s, %(balance)s, %(name)s, %(created_at)s)
+                    ON CONFLICT (user_id) DO UPDATE
                         SET currency = EXCLUDED.currency,
                             balance = EXCLUDED.balance,
                             name = EXCLUDED.name;
