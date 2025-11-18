@@ -7,6 +7,7 @@
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "internationalizationEnabled": false,
+  "loginTheme": "thesis",
   "clientScopes": [
     {
       "name": "profile",
@@ -211,15 +212,17 @@
       "publicClient": true,
       "secret": "",
       "redirectUris": [
-        "http://localhost:5173/*"
+        "http://localhost:5173/*",
+        "http://localhost:3000/*"
       ],
       "webOrigins": [
-        "http://localhost:5173"
+        "http://localhost:5173",
+        "http://localhost:3000"
       ],
       "protocol": "openid-connect",
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5173/*"
+        "post.logout.redirect.uris": "http://localhost:5173/*\nhttp://localhost:3000/*"
       },
       "defaultClientScopes": [
         "web-origins",
@@ -260,6 +263,18 @@
       "enabled": true
     }
   ],
+  "clientScopeMappings": {
+    "realm-management": [
+      {
+        "client": "backend",
+        "roles": [
+          "manage-users",
+          "view-users",
+          "query-users"
+        ]
+      }
+    ]
+  },
   "roles": {
     "realm": [
       {
@@ -278,6 +293,20 @@
       },
       {
         "name": "accounts:read",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "thesis",
+        "attributes": {}
+      },
+      {
+        "name": "payouts:read",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "thesis",
+        "attributes": {}
+      },
+      {
+        "name": "payouts:write",
         "composite": false,
         "clientRole": false,
         "containerId": "thesis",
@@ -307,7 +336,9 @@
       "realmRoles": [
         "transactions:read",
         "transactions:write",
-        "accounts:read"
+        "accounts:read",
+        "payouts:read",
+        "payouts:write"
       ]
     }
   ],
