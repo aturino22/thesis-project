@@ -16,6 +16,7 @@ async def test_send_otp_email_success(
     monkeypatch,
     sync_connection,
     cleanup_otp_audits,
+    cleanup_otp_state,
 ):
     monkeypatch.setenv("OTP_SERVICE_BASE_URL", "http://otp-service")
     get_settings.cache_clear()
@@ -33,6 +34,7 @@ async def test_send_otp_email_success(
     assert response.status_code == 202
     body = response.json()
     assert body["status"] == "sent"
+    assert "challenge_id" in body
     assert body["channel_code"] == "EMAIL"
     assert dispatched and dispatched[0]["channel"] == "EMAIL"
 
@@ -52,6 +54,7 @@ async def test_send_otp_failure_records_audit(
     monkeypatch,
     sync_connection,
     cleanup_otp_audits,
+    cleanup_otp_state,
 ):
     monkeypatch.setenv("OTP_SERVICE_BASE_URL", "http://otp-service")
     get_settings.cache_clear()
@@ -76,7 +79,12 @@ async def test_send_otp_failure_records_audit(
 
 
 @pytest.mark.asyncio
-async def test_send_otp_requires_destination_for_sms(async_client, auth_headers_factory, monkeypatch):
+async def test_send_otp_requires_destination_for_sms(
+    async_client,
+    auth_headers_factory,
+    monkeypatch,
+    cleanup_otp_state,
+):
     monkeypatch.setenv("OTP_SERVICE_BASE_URL", "http://otp-service")
     get_settings.cache_clear()
 
@@ -98,6 +106,7 @@ async def test_send_otp_sms_success(
     monkeypatch,
     sync_connection,
     cleanup_otp_audits,
+    cleanup_otp_state,
 ):
     monkeypatch.setenv("OTP_SERVICE_BASE_URL", "http://otp-service")
     get_settings.cache_clear()
@@ -119,6 +128,7 @@ async def test_send_otp_sms_success(
     assert response.status_code == 202
     body = response.json()
     assert body["status"] == "sent"
+    assert "challenge_id" in body
     assert body["channel_code"] == "SMS"
     assert dispatched and dispatched[0]["channel"] == "SMS"
     assert dispatched[0]["phone_number"] == "+390000000000"
@@ -138,6 +148,7 @@ async def test_send_otp_email_missing_address_returns_400(
     auth_headers_factory,
     monkeypatch,
     sync_connection,
+    cleanup_otp_state,
 ):
     monkeypatch.setenv("OTP_SERVICE_BASE_URL", "http://otp-service")
     get_settings.cache_clear()
@@ -174,4 +185,75 @@ async def test_send_otp_requires_scope(async_client, auth_headers_factory, monke
     response = await async_client.post("/otp/send", headers=headers, json={})
 
     assert response.status_code == 403
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_verify_otp_success(
+    async_client,
+    auth_headers_factory,
+    monkeypatch,
+    sync_connection,
+    cleanup_otp_state,
+):
+    monkeypatch.setenv("OTP_SERVICE_BASE_URL", "http://otp-service")
+    get_settings.cache_clear()
+
+    dispatched: list[dict[str, object]] = []
+
+    async def fake_dispatch(self, payload):  # type: ignore[override]
+        dispatched.append(payload)
+
+    monkeypatch.setattr("backend.app.services.otp_client.OtpServiceClient.dispatch", fake_dispatch, raising=False)
+
+    headers = auth_headers_factory(user_id=DEFAULT_TEST_USER_ID)
+    send_response = await async_client.post("/otp/send", headers=headers, json={})
+    assert send_response.status_code == 202
+    challenge_id = send_response.json()["challenge_id"]
+    code = dispatched[0]["code"]
+
+    verify = await async_client.post(
+        "/otp/verify",
+        headers=headers,
+        json={"challenge_id": challenge_id, "code": code},
+    )
+    assert verify.status_code == 200
+    body = verify.json()
+    assert body["status"] == "verified"
+
+    with sync_connection.cursor() as cur:
+        cur.execute("SELECT expires_at FROM user_mfa_sessions WHERE user_id = %s;", (DEFAULT_TEST_USER_ID,))
+        row = cur.fetchone()
+    assert row is not None
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_verify_otp_rejects_wrong_code(
+    async_client,
+    auth_headers_factory,
+    monkeypatch,
+    cleanup_otp_state,
+):
+    monkeypatch.setenv("OTP_SERVICE_BASE_URL", "http://otp-service")
+    get_settings.cache_clear()
+
+    dispatched: list[dict[str, object]] = []
+
+    async def fake_dispatch(self, payload):  # type: ignore[override]
+        dispatched.append(payload)
+
+    monkeypatch.setattr("backend.app.services.otp_client.OtpServiceClient.dispatch", fake_dispatch, raising=False)
+
+    headers = auth_headers_factory(user_id=DEFAULT_TEST_USER_ID)
+    send_response = await async_client.post("/otp/send", headers=headers, json={})
+    assert send_response.status_code == 202
+    challenge_id = send_response.json()["challenge_id"]
+
+    verify = await async_client.post(
+        "/otp/verify",
+        headers=headers,
+        json={"challenge_id": challenge_id, "code": "000000"},
+    )
+    assert verify.status_code == 400
     get_settings.cache_clear()
