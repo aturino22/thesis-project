@@ -97,6 +97,9 @@ export function OtpVerificationDialog({
         <Typography variant="body2" color="text.secondary">
           Invia un codice monouso via email e inseriscilo per completare la Strong Customer Authentication.
         </Typography>
+        <Alert severity="warning" variant="outlined">
+          Demo: qualsiasi codice numerico inserito verra accettato e il controllo OTP e simulato.
+        </Alert>
         <Button variant="outlined" onClick={handleSend} disabled={otpSend.isPending}>
           {otpSend.isPending ? 'Invio...' : 'Invia codice via email'}
         </Button>

