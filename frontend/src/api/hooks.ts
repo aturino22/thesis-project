@@ -5,7 +5,9 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from '@tanstack/react-query'
+import { useAuth } from 'react-oidc-context'
 import { useApiClient } from '@/api/useApiClient'
+import { appConfig } from '@/config/appConfig'
 
 export type Account = {
   id: string
@@ -223,6 +225,7 @@ export const accountTopupsKey = ['account-topups']
 export const withdrawalsKey = ['withdrawals']
 export const transactionsKey = ['transactions']
 export const cryptoPositionsKey = ['crypto-positions']
+export const withdrawalMethodsKey = ['withdrawal-methods']
 
 type CryptoOrderResponse = {
   account: {
@@ -249,6 +252,46 @@ type CryptoOrderResponse = {
     updated_at: string
   } | null
 }
+
+type WithdrawalMethodApiResponse = {
+  id: string
+  user_id: string
+  type: string
+  iban: string
+  bic: string | null
+  bank_name: string | null
+  account_holder_name: string
+  is_default: boolean
+  status: string
+  created_at: string
+  verified_at: string | null
+}
+
+export type WithdrawalMethod = {
+  id: string
+  type: string
+  iban: string
+  bic: string | null
+  bankName: string | null
+  accountHolderName: string
+  isDefault: boolean
+  status: string
+  createdAt: string
+  verifiedAt: string | null
+}
+
+const mapWithdrawalMethod = (method: WithdrawalMethodApiResponse): WithdrawalMethod => ({
+  id: method.id,
+  type: method.type,
+  iban: method.iban,
+  bic: method.bic,
+  bankName: method.bank_name,
+  accountHolderName: method.account_holder_name,
+  isDefault: method.is_default,
+  status: method.status,
+  createdAt: method.created_at,
+  verifiedAt: method.verified_at,
+})
 
 function parseCurrencyAmount(value: string | number | null | undefined): number {
   if (value == null) {
@@ -739,6 +782,135 @@ export function useMarketAssetQuery(
         history: response.history,
         position,
         transactions,
+      }
+    },
+  })
+}
+
+export function useWithdrawalMethodsQuery(
+  options?: Partial<UseQueryOptions<WithdrawalMethod[], Error>> & { enabled?: boolean },
+) {
+  const apiClient = useApiClient()
+  const { enabled = true, ...queryOptions } = options ?? {}
+
+  return useQuery<WithdrawalMethod[], Error>({
+    queryKey: withdrawalMethodsKey,
+    enabled,
+    staleTime: 120_000,
+    refetchOnWindowFocus: false,
+    ...queryOptions,
+    queryFn: async () => {
+      const response = await apiClient.request<WithdrawalMethodApiResponse[]>({
+        path: '/payouts/withdrawal-methods',
+      })
+      return response.map(mapWithdrawalMethod)
+    },
+  })
+}
+
+type CreateWithdrawalMethodPayload = {
+  accountHolderName: string
+  iban: string
+  bic?: string
+  bankName?: string
+  isDefault?: boolean
+}
+
+export function useCreateWithdrawalMethodMutation() {
+  const apiClient = useApiClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      accountHolderName,
+      iban,
+      bic,
+      bankName,
+      isDefault,
+    }: CreateWithdrawalMethodPayload) => {
+      const response = await apiClient.request<WithdrawalMethodApiResponse>({
+        path: '/payouts/withdrawal-methods',
+        method: 'POST',
+        body: {
+          account_holder_name: accountHolderName,
+          iban,
+          bic,
+          bank_name: bankName,
+          is_default: Boolean(isDefault),
+        },
+      })
+      return mapWithdrawalMethod(response)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: withdrawalMethodsKey })
+    },
+  })
+}
+
+export function useDeleteWithdrawalMethodMutation() {
+  const apiClient = useApiClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (methodId: string) => {
+      await apiClient.request<void>({
+        path: `/payouts/withdrawal-methods/${methodId}`,
+        method: 'DELETE',
+      })
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: withdrawalMethodsKey })
+    },
+  })
+}
+
+type PasswordChangePayload = {
+  currentPassword: string
+  newPassword: string
+}
+
+const issuerWithSlash = appConfig.oidc.issuer.endsWith('/')
+  ? appConfig.oidc.issuer
+  : `${appConfig.oidc.issuer}/`
+
+const passwordEndpoint = (() => {
+  try {
+    return new URL('account/credentials/password', issuerWithSlash).toString()
+  } catch {
+    return `${issuerWithSlash}account/credentials/password`
+  }
+})()
+
+export function usePasswordChangeMutation() {
+  const auth = useAuth()
+
+  return useMutation({
+    mutationFn: async ({ currentPassword, newPassword }: PasswordChangePayload) => {
+      const token = auth.user?.access_token
+      if (!token) {
+        throw new Error('Sessione non valida: impossibile aggiornare la password.')
+      }
+      const response = await fetch(passwordEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+          confirmPassword: newPassword,
+        }),
+      })
+      if (!response.ok) {
+        let detail: { message?: string; errorMessage?: string; error?: string } | undefined
+        try {
+          detail = (await response.json()) as typeof detail
+        } catch {
+          // ignore non-JSON payloads
+        }
+        const detailMessage = detail?.errorMessage ?? detail?.message ?? detail?.error
+        throw new Error(detailMessage ?? 'Impossibile aggiornare la password.')
       }
     },
   })
