@@ -38,9 +38,18 @@ class Settings(BaseSettings):
     otp_service_base_url: str | None = None
     otp_service_timeout_seconds: float = 5.0
     otp_code_ttl_seconds: int = 60
-    cors_allowed_origins: str = "http://localhost:5173"
+    cors_allowed_origins: str = "http://localhost:5173,http://localhost:3000"
     coincap_base_url: str = "https://api.coincap.io/v2"
     coincap_api_key: str | None = None
+    keycloak_base_url: str = "http://localhost:8080"
+    keycloak_realm: str = "thesis"
+    keycloak_admin_client_id: str | None = None
+    keycloak_admin_client_secret: str | None = None
+    keycloak_public_client_id: str = "frontend"
+    keycloak_admin_username: str | None = None
+    keycloak_admin_password: str | None = None
+    keycloak_admin_token_client_id: str = "admin-cli"
+    keycloak_admin_token_realm: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env"),
