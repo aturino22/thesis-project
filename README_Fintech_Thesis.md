@@ -46,7 +46,6 @@ flowchart LR
 | **Database** | PostgreSQL + pgcrypto + RLS | Dati persistenti, cifratura e sicurezza per riga |
 | **Identity Provider** | Keycloak (OIDC/OAuth2) | Gestione utenti, MFA e ruoli |
 | **API Gateway** | NGINX | Reverse proxy, rate limiting e headers di sicurezza |
-| **Observability** | Prometheus + Loki | Metriche e logging strutturato |
 | **DevOps** | Docker Compose + GitHub Actions | Deploy e CI/CD integrati |
 
 ---
