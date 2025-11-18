@@ -225,7 +225,7 @@
       "protocol": "openid-connect",
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5173/*\nhttps://fintechwallet.it/*\nhttps://www.fintechwallet.it/*\nhttp://localhost:3000/*"
+        "post.logout.redirect.uris": "https://fintechwallet.it/auth/logout"
       },
       "defaultClientScopes": [
         "web-origins",

@@ -61,7 +61,7 @@ export const appConfig: AppConfig = {
     ),
     postLogoutRedirectUri: getEnv(
       importEnv.VITE_OIDC_POST_LOGOUT_REDIRECT_URI,
-      `${appOrigin}/`,
+      `${appOrigin}/auth/logout`,
     ),
     scope: getEnv(importEnv.VITE_OIDC_SCOPE, 'openid profile email thesis-access'),
   },
@@ -77,7 +77,7 @@ export const appConfig: AppConfig = {
     ),
     postLogoutRedirect: getPathname(
       importEnv.VITE_OIDC_POST_LOGOUT_REDIRECT_URI,
-      '/',
+      '/auth/logout',
     ),
     accounts: '/accounts',
     market: '/market',
