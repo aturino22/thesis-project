@@ -119,6 +119,19 @@ type WithdrawalApiRecord = {
   reference: string
 }
 
+type OtpSendApiResponse = {
+  status: string
+  challenge_id: string
+  channel_code: string
+  expires_at: string
+}
+
+type OtpVerifyApiResponse = {
+  status: string
+  verified_at: string
+  expires_at: string
+}
+
 type TransactionListResponse = {
   data: Array<{
     id: string
@@ -482,6 +495,63 @@ export function useWithdrawalsQuery(
         requestedAt: record.requested_at,
         reference: record.reference,
       }))
+    },
+  })
+}
+
+type OtpSendPayload = {
+  channelCode?: string
+  destination?: string
+  context?: string
+  metadata?: Record<string, string>
+}
+
+export function useOtpSendMutation() {
+  const apiClient = useApiClient()
+  return useMutation({
+    mutationFn: async (payload?: OtpSendPayload) => {
+      const response = await apiClient.request<OtpSendApiResponse>({
+        path: '/otp/send',
+        method: 'POST',
+        body: {
+          channel_code: payload?.channelCode,
+          destination: payload?.destination,
+          context: payload?.context,
+          metadata: payload?.metadata,
+        },
+      })
+      return {
+        status: response.status,
+        challengeId: response.challenge_id,
+        channelCode: response.channel_code,
+        expiresAt: response.expires_at,
+      }
+    },
+  })
+}
+
+type OtpVerifyPayload = {
+  challengeId: string
+  code: string
+}
+
+export function useOtpVerifyMutation() {
+  const apiClient = useApiClient()
+  return useMutation({
+    mutationFn: async ({ challengeId, code }: OtpVerifyPayload) => {
+      const response = await apiClient.request<OtpVerifyApiResponse>({
+        path: '/otp/verify',
+        method: 'POST',
+        body: {
+          challenge_id: challengeId,
+          code,
+        },
+      })
+      return {
+        status: response.status,
+        verifiedAt: response.verified_at,
+        expiresAt: response.expires_at,
+      }
     },
   })
 }
