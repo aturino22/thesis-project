@@ -43,6 +43,8 @@ import {
   useCryptoPositionsQuery,
   type Transaction,
 } from '@/api/hooks'
+import { OtpVerificationDialog } from '@/components/OtpVerificationDialog'
+import { isMfaSessionStillValid, storeMfaSessionExpiry } from '@/utils/mfaSession'
 import { PublicHomePage } from '@/pages/PublicHomePage'
 
 type BalanceHistoryPoint = {
@@ -199,6 +201,8 @@ export function HomePage() {
   const [withdrawMethodId, setWithdrawMethodId] = useState('')
   const [withdrawError, setWithdrawError] = useState<string | null>(null)
   const [withdrawFeedback, setWithdrawFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [otpDialogOpen, setOtpDialogOpen] = useState(false)
+  const [pendingWithdrawAccountId, setPendingWithdrawAccountId] = useState<string | null>(null)
   const withdrawalMethods = withdrawalMethodsQuery.data ?? []
   const resolvedTopupAccount = useMemo(() => {
     if (!accounts.length) {
@@ -374,12 +378,21 @@ export function HomePage() {
     }
   }
 
-  const handleOpenWithdrawDialog = (accountId: string) => {
+  const openWithdrawDialogForAccount = (accountId: string) => {
     setWithdrawAccountId(accountId)
     setWithdrawAmount('')
     setWithdrawMethodId(defaultWithdrawalMethod?.id ?? withdrawalMethods[0]?.id ?? '')
     setWithdrawError(null)
     setWithdrawDialogOpen(true)
+  }
+
+  const handleOpenWithdrawDialog = (accountId: string) => {
+    if (!isMfaSessionStillValid()) {
+      setPendingWithdrawAccountId(accountId)
+      setOtpDialogOpen(true)
+      return
+    }
+    openWithdrawDialogForAccount(accountId)
   }
 
   const handleCloseWithdrawDialog = () => {
@@ -388,6 +401,20 @@ export function HomePage() {
     }
     setWithdrawDialogOpen(false)
     setWithdrawError(null)
+  }
+
+  const handleOtpVerified = (expiresAt: string) => {
+    storeMfaSessionExpiry(expiresAt)
+    setOtpDialogOpen(false)
+    if (pendingWithdrawAccountId) {
+      openWithdrawDialogForAccount(pendingWithdrawAccountId)
+      setPendingWithdrawAccountId(null)
+    }
+  }
+
+  const handleCloseOtpDialog = () => {
+    setOtpDialogOpen(false)
+    setPendingWithdrawAccountId(null)
   }
 
   const handleConfirmWithdraw = async () => {
@@ -1241,6 +1268,11 @@ export function HomePage() {
           </Dialog>
         </Stack>
       </Container>
+      <OtpVerificationDialog
+        open={otpDialogOpen}
+        onClose={handleCloseOtpDialog}
+        onVerified={handleOtpVerified}
+      />
     </Box>
   )
 }

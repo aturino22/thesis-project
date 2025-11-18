@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type MouseEventHandler } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type MouseEventHandler } from 'react'
 import {
   Alert,
   Avatar,
@@ -25,7 +25,7 @@ import {
   Typography,
 } from '@mui/material'
 import Grid from '@mui/material/GridLegacy'
-import { FaCheckCircle, FaEdit, FaSignOutAlt, FaTrashAlt, FaUnlockAlt } from 'react-icons/fa'
+import { FaCheckCircle, FaEdit, FaTrashAlt, FaUnlockAlt } from 'react-icons/fa'
 import { useAuth } from 'react-oidc-context'
 import { appConfig } from '@/config/appConfig'
 import {
@@ -37,6 +37,8 @@ import {
   useWithdrawalMethodsQuery,
   type WithdrawalMethod,
 } from '@/api/hooks'
+import { OtpVerificationDialog } from '@/components/OtpVerificationDialog'
+import { getStoredMfaSessionExpiry, isMfaSessionStillValid, storeMfaSessionExpiry } from '@/utils/mfaSession'
 import { useColorVisionMode } from '@/theme/ColorVisionProvider'
 
 type UserProfile = {
@@ -49,17 +51,6 @@ type UserProfile = {
   sub?: string
 }
 
-const profileFields: Array<{
-  label: string
-  value: (profile: UserProfile, subject: string) => string | undefined
-  monospaced?: boolean
-}> = [
-  { label: 'Nome completo', value: (profile) => profile.name },
-  { label: 'Username', value: (profile) => profile.preferred_username },
-  { label: 'Email', value: (profile) => profile.email },
-  { label: 'Locale', value: (profile) => profile.locale },
-  { label: 'Soggetto (sub)', value: (_profile, subject) => subject, monospaced: true },
-]
 
 type PasswordFormState = {
   currentPassword: string
@@ -128,6 +119,9 @@ export function ProfilePage() {
   const deleteWithdrawalMethod = useDeleteWithdrawalMethodMutation()
   const { mode: colorVisionMode, setMode: setColorVisionMode } = useColorVisionMode()
   const isDaltonicEnabled = colorVisionMode === 'daltonic'
+  const [otpDialogOpen, setOtpDialogOpen] = useState(false)
+  const [otpSessionExpiresAt, setOtpSessionExpiresAt] = useState<string | null>(null)
+  const pendingOtpActionRef = useRef<(() => Promise<void>) | null>(null)
 
   const profileData = (auth.user?.profile ?? {}) as UserProfile
 
@@ -138,7 +132,6 @@ export function ProfilePage() {
     profileData.email ??
     'Utente'
 
-  const subject = profileData.sub ?? 'N/A'
   const holderName = profileData.name ?? profileData.preferred_username ?? profileData.email ?? 'Utente'
 
   useEffect(() => {
@@ -149,6 +142,45 @@ export function ProfilePage() {
       return { ...prev, accountHolderName: holderName }
     })
   }, [holderName])
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setOtpDialogOpen(false)
+      return
+    }
+    if (isMfaSessionStillValid()) {
+      setOtpSessionExpiresAt(getStoredMfaSessionExpiry())
+      setOtpDialogOpen(false)
+    } else {
+      setOtpDialogOpen(true)
+    }
+  }, [isAuthenticated])
+
+  const executeWithOtpGuard = async (action: () => Promise<void>) => {
+    if (!isMfaSessionStillValid()) {
+      pendingOtpActionRef.current = action
+      setOtpDialogOpen(true)
+      return
+    }
+    pendingOtpActionRef.current = null
+    await action()
+  }
+
+  const handleOtpVerified = (expiresAt: string) => {
+    setOtpSessionExpiresAt(expiresAt)
+    storeMfaSessionExpiry(expiresAt)
+    setOtpDialogOpen(false)
+    const pendingAction = pendingOtpActionRef.current
+    pendingOtpActionRef.current = null
+    if (pendingAction) {
+      void pendingAction()
+    }
+  }
+
+  const handleOtpDialogClose = () => {
+    setOtpDialogOpen(false)
+    pendingOtpActionRef.current = null
+  }
 
   const resetProfileForm = () => {
     setProfileForm({
@@ -183,16 +215,20 @@ export function ProfilePage() {
       return
     }
 
-    try {
-      await passwordMutation.mutateAsync({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
-      })
-      setPasswordSuccess(true)
-      setPasswordForm(defaultPasswordState)
-    } catch (error) {
-      setPasswordError(error instanceof Error ? error.message : 'Impossibile aggiornare la password.')
+    const submitPasswordChange = async () => {
+      try {
+        await passwordMutation.mutateAsync({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        })
+        setPasswordSuccess(true)
+        setPasswordForm(defaultPasswordState)
+      } catch (error) {
+        setPasswordError(error instanceof Error ? error.message : 'Impossibile aggiornare la password.')
+      }
     }
+
+    await executeWithOtpGuard(submitPasswordChange)
   }
 
   const handleWithdrawalSubmit: MouseEventHandler<HTMLButtonElement> = async (event) => {
@@ -205,41 +241,67 @@ export function ProfilePage() {
       return
     }
 
-    try {
-      await createWithdrawalMethod.mutateAsync({
-        accountHolderName: withdrawalForm.accountHolderName,
-        iban: withdrawalForm.iban,
-        bic: withdrawalForm.bic || undefined,
-        bankName: withdrawalForm.bankName || undefined,
-        isDefault: withdrawalForm.isDefault,
-      })
-      setWithdrawalSuccess('Metodo di prelievo salvato correttamente.')
-      setWithdrawalForm((prev) => ({
-        ...defaultWithdrawalForm,
-        accountHolderName: prev.accountHolderName,
-      }))
-    } catch (error) {
-      setWithdrawalError(
-        error instanceof Error ? error.message : 'Impossibile salvare il metodo. Verifica i dati inseriti.',
-      )
+    const submitWithdrawalMethod = async () => {
+      try {
+        await createWithdrawalMethod.mutateAsync({
+          accountHolderName: withdrawalForm.accountHolderName,
+          iban: withdrawalForm.iban,
+          bic: withdrawalForm.bic || undefined,
+          bankName: withdrawalForm.bankName || undefined,
+          isDefault: withdrawalForm.isDefault,
+        })
+        setWithdrawalSuccess('Metodo di prelievo salvato correttamente.')
+        setWithdrawalForm((prev) => ({
+          ...defaultWithdrawalForm,
+          accountHolderName: prev.accountHolderName,
+        }))
+      } catch (error) {
+        setWithdrawalError(
+          error instanceof Error ? error.message : 'Impossibile salvare il metodo. Verifica i dati inseriti.',
+        )
+      }
     }
+
+    await executeWithOtpGuard(submitWithdrawalMethod)
   }
 
   const handleProfileSubmit: MouseEventHandler<HTMLButtonElement> = async (event) => {
     event.preventDefault()
     setProfileError(null)
     setProfileSuccess(false)
-    try {
-      await profileUpdateMutation.mutateAsync({
-        firstName: profileForm.firstName || undefined,
-        lastName: profileForm.lastName || undefined,
-        email: profileForm.email || undefined,
-      })
-      setProfileSuccess(true)
-      setIsEditingProfile(false)
-    } catch (error) {
-      setProfileError(error instanceof Error ? error.message : 'Impossibile aggiornare il profilo.')
+    const normalizedFirstName = profileForm.firstName.trim()
+    const normalizedLastName = profileForm.lastName.trim()
+    const normalizedEmail = profileForm.email.trim()
+    const payload: { firstName?: string; lastName?: string; email?: string } = {}
+    if (normalizedFirstName && normalizedFirstName !== (profileData.given_name ?? '')) {
+      payload.firstName = normalizedFirstName
     }
+    if (normalizedLastName && normalizedLastName !== (profileData.family_name ?? '')) {
+      payload.lastName = normalizedLastName
+    }
+    const currentEmail = profileData.email ?? ''
+    const emailChanged = Boolean(normalizedEmail) && normalizedEmail !== currentEmail
+    if (emailChanged) {
+      payload.email = normalizedEmail
+    }
+
+    const submitProfileUpdate = async () => {
+      try {
+        await profileUpdateMutation.mutateAsync(payload)
+        setProfileSuccess(true)
+        setIsEditingProfile(false)
+      } catch (error) {
+        setProfileError(error instanceof Error ? error.message : 'Impossibile aggiornare il profilo.')
+      }
+    }
+
+    if (emailChanged) {
+      await executeWithOtpGuard(submitProfileUpdate)
+      return
+    }
+
+    pendingOtpActionRef.current = null
+    await submitProfileUpdate()
   }
 
   const handleProfileEditToggle = () => {
@@ -311,6 +373,7 @@ export function ProfilePage() {
   const handleColorVisionToggle = (event: ChangeEvent<HTMLInputElement>) => {
     setColorVisionMode(event.target.checked ? 'daltonic' : 'default')
   }
+
 
 
   if (!isAuthenticated) {
@@ -447,14 +510,29 @@ export function ProfilePage() {
                     </Stack>
                   )}
                 </CardContent>
-                <CardActions sx={{ justifyContent: 'space-between', px: 3, pb: 3, flexWrap: 'wrap', rowGap: 1 }}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
+                <CardActions
+                  sx={{
+                    justifyContent: 'space-between',
+                    px: 3,
+                    pb: 3,
+                    flexWrap: 'wrap',
+                    rowGap: 1,
+                    gap: 1,
+                  }}
+                >
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    alignItems="flex-start"
+                    sx={{ width: '100%' }}
+                  >
                     {isEditingProfile ? (
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: '100%' }}>
                         <Button
                           variant="contained"
                           startIcon={<FaEdit />}
                           onClick={handleProfileSubmit}
+                          fullWidth
                           disabled={profileUpdateMutation.isPending}
                         >
                           {profileUpdateMutation.isPending ? 'Salvataggio...' : 'Salva profilo'}
@@ -462,13 +540,20 @@ export function ProfilePage() {
                         <Button
                           variant="outlined"
                           onClick={handleProfileCancel}
+                          fullWidth
                           disabled={profileUpdateMutation.isPending}
                         >
                           Annulla
                         </Button>
                       </Stack>
                     ) : (
-                      <Button variant="outlined" startIcon={<FaEdit />} onClick={handleProfileEditToggle}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<FaEdit />}
+                        onClick={handleProfileEditToggle}
+                        fullWidth
+                        sx={{ maxWidth: { xs: '100%', sm: 'auto' } }}
+                      >
                         Modifica profilo
                       </Button>
                     )}
@@ -477,18 +562,12 @@ export function ProfilePage() {
                       color="error"
                       startIcon={<FaTrashAlt />}
                       onClick={handleOpenDeleteDialog}
+                      fullWidth
+                      sx={{ maxWidth: { xs: '100%', sm: 'auto' } }}
                     >
                       Elimina profilo
                     </Button>
                   </Stack>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<FaSignOutAlt />}
-                    onClick={handleLogout}
-                  >
-                    Esci
-                  </Button>
                 </CardActions>
               </Card>
             </Grid>
@@ -515,6 +594,52 @@ export function ProfilePage() {
                     control={<Switch checked={isDaltonicEnabled} onChange={handleColorVisionToggle} />}
                     label={isDaltonicEnabled ? 'Tema chiaro' : 'Tema scuro'}
                   />
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Card sx={{ height: '100%' }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack spacing={0}>
+                      <Typography variant="overline" color="text.secondary">
+                        Strong Customer Authentication
+                      </Typography>
+                      <Typography variant="h5" fontWeight={700}>
+                        Verifica tramite OTP
+                      </Typography>
+                    </Stack>
+                    {otpSessionExpiresAt ? (
+                      <Chip
+                        size="small"
+                        color="success"
+                        icon={<FaCheckCircle />}
+                        label="Verificato"
+                        sx={{ fontWeight: 600 }}
+                      />
+                    ) : null}
+                  </Stack>
+
+                  <Typography variant="body2" color="text.secondary">
+                    Il codice OTP verrà richiesto al primo accesso e prima di operazioni sensibili come i prelievi. Se non
+                    hai ancora completato la verifica, procedi ora.
+                  </Typography>
+                  {otpSessionExpiresAt ? (
+                    <Typography variant="caption" color="text.secondary">
+                      Sessione MFA valida fino al {new Date(otpSessionExpiresAt).toLocaleString('it-IT')}.
+                    </Typography>
+                  ) : (
+                    <Typography variant="caption" color="error.main">
+                      Nessuna verifica attiva. Completa la procedura per sbloccare tutte le funzionalità.
+                    </Typography>
+                  )}
+
+                  <Stack direction="row" spacing={1}>
+                    <Button variant="contained" onClick={() => setOtpDialogOpen(true)}>
+                      Apri verifica OTP
+                    </Button>
+                  </Stack>
                 </CardContent>
               </Card>
             </Grid>
@@ -827,6 +952,11 @@ export function ProfilePage() {
           </Button>
         </DialogActions>
       </Dialog>
+      <OtpVerificationDialog
+        open={otpDialogOpen}
+        onClose={handleOtpDialogClose}
+        onVerified={handleOtpVerified}
+      />
     </Box>
   )
 }
