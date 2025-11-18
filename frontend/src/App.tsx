@@ -5,7 +5,6 @@ import { SilentRenewPage } from '@/routes/SilentRenewPage'
 import { NotFoundPage } from '@/routes/NotFoundPage'
 import { appConfig } from '@/config/appConfig'
 import { AppLayout } from '@/layouts/AppLayout'
-import { AccountsPage } from '@/pages/AccountsPage'
 import { MarketPage } from '@/pages/MarketPage'
 import { MarketAssetPage } from '@/pages/MarketAssetPage'
 import { ProfilePage } from '@/pages/ProfilePage'
@@ -18,7 +17,6 @@ export function App() {
     <Routes>
       <Route path="/" element={<AppLayout />}>
         <Route index element={<HomePage />} />
-        <Route path={stripLeadingSlash(appConfig.routes.accounts)} element={<AccountsPage />} />
         <Route path={stripLeadingSlash(appConfig.routes.market)} element={<MarketPage />} />
         <Route
           path={`${stripLeadingSlash(appConfig.routes.market)}/:ticker`}

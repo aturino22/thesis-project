@@ -70,7 +70,6 @@ export function Navbar() {
   const navItems: NavItem[] = useMemo(
     () => [
       { type: 'link', label: 'Home', path: appConfig.routes.home, exact: true },
-      { type: 'link', label: 'Accounts', path: appConfig.routes.accounts },
       { type: 'link', label: 'Market', path: appConfig.routes.market },
       { type: 'link', label: displayName, path: appConfig.routes.profile },
       { type: 'action', label: 'Logout', onClick: handleLogout },

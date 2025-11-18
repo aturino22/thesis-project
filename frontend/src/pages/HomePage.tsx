@@ -1,29 +1,44 @@
-import { useMemo, type MouseEventHandler } from 'react'
+import { useMemo, useState, type MouseEventHandler } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import {
   Alert,
   Avatar,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
   CircularProgress,
   Container,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
+  MenuItem,
   Skeleton,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material'
 import Grid from '@mui/material/GridLegacy'
-import { FaRocket, FaShieldAlt } from 'react-icons/fa'
 import { alpha, useTheme } from '@mui/material/styles'
+import type { IconType } from 'react-icons'
+import { FaArrowCircleDown, FaArrowCircleUp, FaExchangeAlt, FaRocket, FaShieldAlt } from 'react-icons/fa'
 import { useAuth } from 'react-oidc-context'
 import { appConfig } from '@/config/appConfig'
 import {
   useAccountSummary,
   useAccountsQuery,
+  useAccountTopUpMutation,
+  useAccountTopupsQuery,
+  useWithdrawalMethodsQuery,
+  useWithdrawalMutation,
+  useWithdrawalsQuery,
   useTransactionsQuery,
   useCryptoPositionsQuery,
   type Transaction,
@@ -38,6 +53,19 @@ type BalanceHistoryPoint = {
 type ChartPoint = BalanceHistoryPoint & {
   x: number
   y: number
+}
+
+type ActivityKind = 'buy' | 'sell' | 'topup' | 'withdrawal'
+
+type ActivityEntry = {
+  id: string
+  kind: ActivityKind
+  amount: number
+  currency: string
+  timestamp: string
+  label: string
+  description?: string | null
+  status?: string | null
 }
 
 const formatHistoryLabel = (date: Date) =>
@@ -141,13 +169,267 @@ export function HomePage() {
   const accountsQuery = useAccountsQuery({ enabled: isAuthenticated })
   const transactionsQuery = useTransactionsQuery({ enabled: isAuthenticated })
   const cryptoPositionsQuery = useCryptoPositionsQuery({ enabled: isAuthenticated })
+  const accountTopupsQuery = useAccountTopupsQuery({ enabled: isAuthenticated })
+  const withdrawalsQuery = useWithdrawalsQuery({ enabled: isAuthenticated })
 
   const accounts = accountsQuery.data ?? []
   const transactions = transactionsQuery.data ?? []
-  const recentTransactions = transactions.slice(0, 5)
+  const topups = accountTopupsQuery.data ?? []
+  const withdrawals = withdrawalsQuery.data ?? []
   const accountSummary = useAccountSummary(accounts)
   const cryptoPositions = cryptoPositionsQuery.data?.positions ?? []
   const cryptoTotalValue = cryptoPositionsQuery.data?.totalValue ?? 0
+  const marketBasePath = appConfig.routes.market.endsWith('/')
+    ? appConfig.routes.market.slice(0, -1)
+    : appConfig.routes.market
+  const topupMutation = useAccountTopUpMutation()
+  const withdrawalMethodsQuery = useWithdrawalMethodsQuery({ enabled: isAuthenticated })
+  const withdrawalMutation = useWithdrawalMutation()
+  const [topupDialogOpen, setTopupDialogOpen] = useState(false)
+  const [topupAccountId, setTopupAccountId] = useState('')
+  const [topupAmount, setTopupAmount] = useState('')
+  const [cardNumber, setCardNumber] = useState('')
+  const [cardExpiry, setCardExpiry] = useState('')
+  const [cardCvv, setCardCvv] = useState('')
+  const [topupError, setTopupError] = useState<string | null>(null)
+  const [topupFeedback, setTopupFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false)
+  const [withdrawAccountId, setWithdrawAccountId] = useState('')
+  const [withdrawAmount, setWithdrawAmount] = useState('')
+  const [withdrawMethodId, setWithdrawMethodId] = useState('')
+  const [withdrawError, setWithdrawError] = useState<string | null>(null)
+  const [withdrawFeedback, setWithdrawFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const withdrawalMethods = withdrawalMethodsQuery.data ?? []
+  const resolvedTopupAccount = useMemo(() => {
+    if (!accounts.length) {
+      return null
+    }
+    return accounts.find((account) => account.id === topupAccountId) ?? accounts[0]
+  }, [accounts, topupAccountId])
+  const defaultWithdrawalMethod = useMemo(
+    () => withdrawalMethods.find((method) => method.isDefault) ?? withdrawalMethods[0] ?? null,
+    [withdrawalMethods],
+  )
+  const resolvedWithdrawAccount = useMemo(() => {
+    if (!accounts.length) {
+      return null
+    }
+    return accounts.find((account) => account.id === withdrawAccountId) ?? accounts[0]
+  }, [accounts, withdrawAccountId])
+  const resolvedWithdrawMethod = useMemo(() => {
+    if (!withdrawalMethods.length) {
+      return null
+    }
+    return withdrawalMethods.find((method) => method.id === withdrawMethodId) ?? defaultWithdrawalMethod
+  }, [withdrawalMethods, withdrawMethodId, defaultWithdrawalMethod])
+
+  const recentActivities = useMemo<ActivityEntry[]>(() => {
+    const tradeActivities: ActivityEntry[] = transactions.map((transaction) => ({
+      id: `txn-${transaction.id}`,
+      kind: transaction.direction,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      timestamp: transaction.createdAt,
+      label: transaction.direction === 'buy' ? 'Acquisto asset' : 'Vendita asset',
+      description: transaction.category ?? 'Nessuna categoria',
+    }))
+    const topupActivities: ActivityEntry[] = topups.map((topup) => ({
+      id: `topup-${topup.id}`,
+      kind: 'topup',
+      amount: topup.amount,
+      currency: topup.currency,
+      timestamp: topup.createdAt,
+      label: 'Ricarica conto',
+      description: 'Saldo incrementato manualmente',
+    }))
+    const withdrawalActivities: ActivityEntry[] = withdrawals.map((withdrawal) => ({
+      id: `withdrawal-${withdrawal.id}`,
+      kind: 'withdrawal',
+      amount: withdrawal.totalDebit,
+      currency: withdrawal.currency,
+      timestamp: withdrawal.requestedAt,
+      label: 'Richiesta prelievo',
+      description: withdrawal.reference ? `Rif. ${withdrawal.reference}` : null,
+      status: withdrawal.status,
+    }))
+    return [...tradeActivities, ...topupActivities, ...withdrawalActivities]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 5)
+  }, [transactions, topups, withdrawals])
+
+  const activityLoading =
+    transactionsQuery.isLoading || accountTopupsQuery.isLoading || withdrawalsQuery.isLoading
+  const activityError = transactionsQuery.isError || accountTopupsQuery.isError || withdrawalsQuery.isError
+  const activityErrorMessage =
+    transactionsQuery.error?.message ??
+    accountTopupsQuery.error?.message ??
+    withdrawalsQuery.error?.message ??
+    'Impossibile recuperare i movimenti.'
+
+  const getActivityVisuals = (kind: ActivityKind): { icon: IconType; isCredit: boolean; avatarBg: string; avatarColor: string } => {
+    switch (kind) {
+      case 'topup':
+        return {
+          icon: FaArrowCircleDown,
+          isCredit: true,
+          avatarBg: alpha(theme.palette.success.main, 0.12),
+          avatarColor: theme.palette.success.light,
+        }
+      case 'withdrawal':
+        return {
+          icon: FaArrowCircleUp,
+          isCredit: false,
+          avatarBg: alpha(theme.palette.error.main, 0.1),
+          avatarColor: theme.palette.error.light,
+        }
+      case 'sell':
+        return {
+          icon: FaExchangeAlt,
+          isCredit: true,
+          avatarBg: alpha(theme.palette.info.main, 0.12),
+          avatarColor: theme.palette.info.light,
+        }
+      case 'buy':
+      default:
+        return {
+          icon: FaExchangeAlt,
+          isCredit: false,
+          avatarBg: alpha(theme.palette.warning.main, 0.12),
+          avatarColor: theme.palette.warning.light,
+        }
+    }
+  }
+
+  const handleOpenTopupDialog = (accountId: string) => {
+    setTopupAccountId(accountId)
+    setTopupAmount('')
+    setCardNumber('')
+    setCardExpiry('')
+    setCardCvv('')
+    setTopupError(null)
+    setTopupDialogOpen(true)
+  }
+
+  const handleCloseTopupDialog = () => {
+    if (topupMutation.isPending) {
+      return
+    }
+    setTopupDialogOpen(false)
+    setTopupError(null)
+  }
+
+  const handleConfirmTopup = async () => {
+    if (!resolvedTopupAccount) {
+      setTopupError('Nessun conto selezionato.')
+      return
+    }
+    const numericAmount = Number(topupAmount)
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setTopupError('Inserisci un importo valido maggiore di zero.')
+      return
+    }
+    const normalizedCard = cardNumber.replace(/\s+/g, '')
+    if (!/^\d{16}$/.test(normalizedCard)) {
+      setTopupError('Inserisci un numero carta valido di 16 cifre.')
+      return
+    }
+    if (!/^\d{2}\/\d{4}$/.test(cardExpiry)) {
+      setTopupError('Inserisci la scadenza nel formato MM/YYYY.')
+      return
+    }
+    const [expMonth] = cardExpiry.split('/')
+    const monthNumber = Number(expMonth)
+    if (monthNumber < 1 || monthNumber > 12) {
+      setTopupError('Il mese di scadenza deve essere compreso tra 01 e 12.')
+      return
+    }
+    if (!/^\d{3}$/.test(cardCvv)) {
+      setTopupError('Il CVV deve contenere 3 cifre.')
+      return
+    }
+    setTopupError(null)
+    try {
+      await topupMutation.mutateAsync({
+        accountId: resolvedTopupAccount.id,
+        amount: numericAmount,
+      })
+      setTopupDialogOpen(false)
+      setTopupAmount('')
+      setCardNumber('')
+      setCardExpiry('')
+      setCardCvv('')
+      setTopupFeedback({
+        type: 'success',
+        message: `Saldo del conto "${resolvedTopupAccount.name}" incrementato di ${formatCurrency(
+          numericAmount,
+          resolvedTopupAccount.currency,
+        )}.`,
+      })
+    } catch (error) {
+      setTopupError(error instanceof Error ? error.message : 'Operazione non riuscita.')
+      setTopupFeedback({
+        type: 'error',
+        message: 'Impossibile completare la ricarica. Riprova più tardi.',
+      })
+    }
+  }
+
+  const handleOpenWithdrawDialog = (accountId: string) => {
+    setWithdrawAccountId(accountId)
+    setWithdrawAmount('')
+    setWithdrawMethodId(defaultWithdrawalMethod?.id ?? withdrawalMethods[0]?.id ?? '')
+    setWithdrawError(null)
+    setWithdrawDialogOpen(true)
+  }
+
+  const handleCloseWithdrawDialog = () => {
+    if (withdrawalMutation.isPending) {
+      return
+    }
+    setWithdrawDialogOpen(false)
+    setWithdrawError(null)
+  }
+
+  const handleConfirmWithdraw = async () => {
+    if (!resolvedWithdrawAccount) {
+      setWithdrawError('Nessun conto disponibile.')
+      return
+    }
+    if (!resolvedWithdrawMethod) {
+      setWithdrawError('Registra prima un metodo di prelievo nella pagina Profilo.')
+      return
+    }
+    const numericAmount = Number(withdrawAmount)
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setWithdrawError('Inserisci un importo valido maggiore di zero.')
+      return
+    }
+    setWithdrawError(null)
+    try {
+      await withdrawalMutation.mutateAsync({
+        accountId: resolvedWithdrawAccount.id,
+        methodId: resolvedWithdrawMethod.id,
+        amount: numericAmount,
+        currency: resolvedWithdrawAccount.currency,
+      })
+      setWithdrawDialogOpen(false)
+      setWithdrawAmount('')
+      setWithdrawFeedback({
+        type: 'success',
+        message: `Richiesta di prelievo inoltrata da ${formatCurrency(
+          numericAmount,
+          resolvedWithdrawAccount.currency,
+        )}.`,
+      })
+    } catch (error) {
+      setWithdrawError(error instanceof Error ? error.message : 'Operazione non riuscita.')
+      setWithdrawFeedback({
+        type: 'error',
+        message: 'Impossibile completare la richiesta di prelievo. Riprova più tardi.',
+      })
+    }
+  }
+
   const balanceHistory = useMemo(
     () => buildBalanceHistory(transactions, accountSummary.totalBalance),
     [transactions, accountSummary.totalBalance],
@@ -202,11 +484,11 @@ export function HomePage() {
         <Stack spacing={{ xs: 6, md: 8 }}>
           <Stack spacing={3}>
             <Stack spacing={1.5}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1.5}
-                alignItems={{ xs: 'flex-start', sm: 'center' }}
-              >
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1.5}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+        >
                 <Chip
                   icon={<FaRocket size={14} />}
                   label="Wallet digitale evoluto"
@@ -323,78 +605,99 @@ export function HomePage() {
                       <List disablePadding>
                         {cryptoPositions.map((asset, index) => {
                           const share = cryptoTotalValue > 0 ? (asset.eurValue / cryptoTotalValue) * 100 : 0
+                          const assetSlug = (asset.ticker || asset.name || asset.id).toLowerCase()
+                          const assetDetailPath = `${marketBasePath}/${encodeURIComponent(assetSlug)}`
                           return (
                             <ListItem
                               key={asset.id}
                               disableGutters
                               sx={{
-                                py: 1.25,
                                 borderBottom:
                                   index === cryptoPositions.length - 1 ? 'none' : '1px solid',
                                 borderColor: index === cryptoPositions.length - 1 ? undefined : 'divider',
-                                alignItems: 'flex-start',
+                                px: 0,
                               }}
                             >
-                              <Stack spacing={1} sx={{ width: '100%' }}>
-                                <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
-                                  <Stack direction="row" spacing={1.5} alignItems="center">
-                                    <Avatar
-                                      src={asset.iconUrl ?? undefined}
-                                      alt={asset.name}
-                                      variant="rounded"
-                                      sx={{ width: 40, height: 40, bgcolor: 'background.default' }}
-                                    >
-                                      {!asset.iconUrl ? asset.ticker[0] ?? asset.name[0] ?? '?' : null}
-                                    </Avatar>
-                                    <Stack spacing={0}>
-                                      <Typography variant="subtitle2" fontWeight={600}>
-                                        {asset.name}
+                              <ListItemButton
+                                component={RouterLink}
+                                to={assetDetailPath}
+                                sx={{
+                                  py: 1.25,
+                                  px: 0,
+                                  borderRadius: 2,
+                                  alignItems: 'flex-start',
+                                  transition: 'background-color 0.2s ease',
+                                  '&:hover': {
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                                  },
+                                }}
+                              >
+                                <Stack spacing={1} sx={{ width: '100%' }}>
+                                  <Stack
+                                    direction="row"
+                                    spacing={1.5}
+                                    alignItems="center"
+                                    justifyContent="space-between"
+                                  >
+                                    <Stack direction="row" spacing={1.5} alignItems="center">
+                                      <Avatar
+                                        src={asset.iconUrl ?? undefined}
+                                        alt={asset.name}
+                                        variant="rounded"
+                                        sx={{ width: 40, height: 40, bgcolor: 'background.default' }}
+                                      >
+                                        {!asset.iconUrl ? asset.ticker[0] ?? asset.name[0] ?? '?' : null}
+                                      </Avatar>
+                                      <Stack spacing={0}>
+                                        <Typography variant="subtitle2" fontWeight={600}>
+                                          {asset.name}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                          {asset.amount.toLocaleString('it-IT', { maximumFractionDigits: 6 })}{' '}
+                                          {asset.ticker}
+                                        </Typography>
+                                      </Stack>
+                                    </Stack>
+                                    <Stack spacing={0.25} alignItems="flex-end">
+                                      <Typography variant="subtitle1" fontWeight={600}>
+                                        {formatCurrency(asset.eurValue, 'EUR')}
                                       </Typography>
-                                      <Typography variant="caption" color="text.secondary">
-                                        {asset.amount.toLocaleString('it-IT', { maximumFractionDigits: 6 })}{' '}
-                                        {asset.ticker}
-                                      </Typography>
+                                      {asset.change24hPercent != null ? (
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            color: asset.change24hPercent >= 0 ? 'primary.main' : 'error.main',
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          {asset.change24hPercent >= 0 ? '+' : ''}
+                                          {asset.change24hPercent.toFixed(2)}%
+                                        </Typography>
+                                      ) : (
+                                        <Typography variant="caption" color="text.secondary">
+                                          n/d
+                                        </Typography>
+                                      )}
                                     </Stack>
                                   </Stack>
-                                  <Stack spacing={0.25} alignItems="flex-end">
-                                    <Typography variant="subtitle1" fontWeight={600}>
-                                      {formatCurrency(asset.eurValue, 'EUR')}
-                                    </Typography>
-                                    {asset.change24hPercent != null ? (
-                                      <Typography
-                                        variant="caption"
-                                        sx={{
-                                          color: asset.change24hPercent >= 0 ? 'primary.main' : 'error.main',
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        {asset.change24hPercent >= 0 ? '+' : ''}
-                                        {asset.change24hPercent.toFixed(2)}%
-                                      </Typography>
-                                    ) : (
-                                      <Typography variant="caption" color="text.secondary">
-                                        n/d
-                                      </Typography>
-                                    )}
-                                  </Stack>
-                                </Stack>
-                                <Box
-                                  sx={{
-                                    height: 4,
-                                    borderRadius: 999,
-                                    backgroundColor: alpha(theme.palette.text.primary, 0.08),
-                                    overflow: 'hidden',
-                                  }}
-                                >
                                   <Box
                                     sx={{
-                                      width: `${share}%`,
-                                      background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.primary.main})`,
-                                      height: '100%',
+                                      height: 4,
+                                      borderRadius: 999,
+                                      backgroundColor: alpha(theme.palette.text.primary, 0.08),
+                                      overflow: 'hidden',
                                     }}
-                                  />
-                                </Box>
-                              </Stack>
+                                  >
+                                    <Box
+                                      sx={{
+                                        width: `${share}%`,
+                                        background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.primary.main})`,
+                                        height: '100%',
+                                      }}
+                                    />
+                                  </Box>
+                                </Stack>
+                              </ListItemButton>
                             </ListItem>
                           )
                         })}
@@ -521,6 +824,26 @@ export function HomePage() {
                         : formatCurrency(accountSummary.totalBalance, accountSummary.currency)}
                     </Typography>
                     <Divider />
+                    {topupFeedback ? (
+                      <Alert
+                        severity={topupFeedback.type}
+                        variant="outlined"
+                        onClose={() => setTopupFeedback(null)}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        {topupFeedback.message}
+                      </Alert>
+                    ) : null}
+                    {withdrawFeedback ? (
+                      <Alert
+                        severity={withdrawFeedback.type}
+                        variant="outlined"
+                        onClose={() => setWithdrawFeedback(null)}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        {withdrawFeedback.message}
+                      </Alert>
+                    ) : null}
                     {accountsQuery.isLoading ? (
                       <Stack spacing={1.25}>
                         {Array.from({ length: 3 }).map((_, index) => (
@@ -547,24 +870,46 @@ export function HomePage() {
                               borderColor: 'divider',
                             }}
                           >
-                            <ListItemText
-                              primary={
-                                <Typography variant="subtitle1" fontWeight={600}>
-                                  {account.name}
-                                </Typography>
-                              }
-                              secondary={
-                                <Stack spacing={0.5}>
-                                  <Typography variant="body2" color="text.primary">
-                                    {formatCurrency(account.balance, account.currency)}
+                            <Stack
+                              direction={{ xs: 'column', sm: 'row' }}
+                              spacing={1}
+                              alignItems={{ xs: 'flex-start', sm: 'center' }}
+                              justifyContent="space-between"
+                              sx={{ width: '100%' }}
+                            >
+                              <ListItemText
+                                primary={
+                                  <Typography variant="subtitle1" fontWeight={600}>
+                                    {account.name}
                                   </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Creato il {formatDateTime(account.createdAt)}
-                                  </Typography>
-                                </Stack>
-                              }
-                              secondaryTypographyProps={{ component: 'div' }}
-                            />
+                                }
+                                secondary={
+                                  <Stack spacing={0.5}>
+                                    <Typography variant="body2" color="text.primary">
+                                      {formatCurrency(account.balance, account.currency)}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Creato il {formatDateTime(account.createdAt)}
+                                    </Typography>
+                                  </Stack>
+                                }
+                                secondaryTypographyProps={{ component: 'div' }}
+                              />
+                              <Stack direction="row" spacing={1}>
+                                <Button variant="outlined" size="small" onClick={() => handleOpenTopupDialog(account.id)}>
+                                  Ricarica
+                                </Button>
+                                <Button
+                                  variant="outlined"
+                                  color="secondary"
+                                  size="small"
+                                  disabled={!withdrawalMethods.length}
+                                  onClick={() => handleOpenWithdrawDialog(account.id)}
+                                >
+                                  Preleva
+                                </Button>
+                              </Stack>
+                            </Stack>
                           </ListItem>
                         ))}
                       </List>
@@ -593,7 +938,7 @@ export function HomePage() {
                         </Typography>
                       </Stack>
                       <Chip
-                        label={`${recentTransactions.length} mostrate`}
+                        label={`${recentActivities.length} mostrate`}
                         color="primary"
                         variant="outlined"
                         size="small"
@@ -603,73 +948,89 @@ export function HomePage() {
 
                     <Divider />
 
-                    {transactionsQuery.isLoading ? (
+                    {activityLoading ? (
                       <Stack spacing={1.25}>
                         {Array.from({ length: 5 }).map((_, index) => (
                           <Skeleton key={`txn-skel-${index}`} variant="rounded" height={32} />
                         ))}
                       </Stack>
-                    ) : transactionsQuery.isError ? (
+                    ) : activityError ? (
                       <Alert severity="error" variant="outlined">
-                        {transactionsQuery.error.message}
+                        {activityErrorMessage}
                       </Alert>
-                    ) : recentTransactions.length === 0 ? (
+                    ) : recentActivities.length === 0 ? (
                       <Typography variant="body2" color="text.secondary">
-                        Nessuna transazione registrata per i conti selezionati.
+                        Nessuna operazione registrata per i conti selezionati.
                       </Typography>
                     ) : (
                       <List disablePadding>
-                        {recentTransactions.map((transaction, index) => (
-                          <ListItem
-                            key={transaction.id}
-                            disableGutters
-                            sx={{
-                              alignItems: 'flex-start',
-                              py: 1,
-                              borderBottom:
-                                index === recentTransactions.length - 1 ? 'none' : '1px solid',
-                              borderColor: 'divider',
-                            }}
-                          >
-                            <ListItemText
-                              primary={
-                                <Stack
-                                  direction="row"
-                                  spacing={1}
-                                  justifyContent="space-between"
-                                  alignItems="baseline"
+                        {recentActivities.map((activity, index) => {
+                          const visuals = getActivityVisuals(activity.kind)
+                          const IconComponent = visuals.icon
+                          return (
+                            <ListItem
+                              key={activity.id}
+                              disableGutters
+                              sx={{
+                                py: 1,
+                                borderBottom: index === recentActivities.length - 1 ? 'none' : '1px solid',
+                                borderColor: 'divider',
+                              }}
+                            >
+                              <Stack
+                                direction="row"
+                                spacing={2}
+                                alignItems="center"
+                                sx={{ width: '100%' }}
+                              >
+                                <Avatar
+                                  sx={{
+                                    width: 40,
+                                    height: 40,
+                                    bgcolor: visuals.avatarBg,
+                                    color: visuals.avatarColor,
+                                  }}
                                 >
-                                  <Typography
-                                    variant="subtitle1"
-                                    fontWeight={600}
-                                    color={
-                                      transaction.direction === 'sell'
-                                        ? 'success.main'
-                                        : 'error.main'
-                                    }
-                                  >
-                                    {transaction.direction === 'sell' ? '+' : '-'}
-                                    {formatCurrency(transaction.amount, transaction.currency)}
+                                  <IconComponent size={18} />
+                                </Avatar>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography variant="subtitle2" fontWeight={600}>
+                                    {activity.label}
                                   </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {formatDateTime(transaction.createdAt)}
+                                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    {formatDateTime(activity.timestamp)}
                                   </Typography>
-                                </Stack>
-                              }
-                              secondary={
-                                <Typography variant="body2" color="text.secondary">
-                                  {transaction.category ?? 'Nessuna categoria'}
+                                  {activity.kind === 'withdrawal' ? (
+                                    <Chip
+                                      label={getWithdrawalStatusLabel(activity.status)}
+                                      color={getWithdrawalStatusColor(activity.status)}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ mt: 0.5, fontWeight: 600 }}
+                                    />
+                                  ) : activity.description ? (
+                                    <Typography variant="body2" color="text.secondary">
+                                      {activity.description}
+                                    </Typography>
+                                  ) : null}
+                                </Box>
+                                <Typography
+                                  variant="subtitle1"
+                                  fontWeight={600}
+                                  color={visuals.isCredit ? 'success.main' : 'error.main'}
+                                >
+                                  {visuals.isCredit ? '+' : '-'}
+                                  {formatCurrency(activity.amount, activity.currency)}
                                 </Typography>
-                              }
-                              secondaryTypographyProps={{ component: 'div' }}
-                            />
-                          </ListItem>
-                        ))}
+                              </Stack>
+                            </ListItem>
+                          )
+                        })}
                       </List>
                     )}
-                  </CardContent>
-                </Card>
-              </Grid>
+                 </CardContent>
+               </Card>
+             </Grid>
             </Grid>
           </Stack>
 
@@ -698,10 +1059,216 @@ export function HomePage() {
               sx={{ fontWeight: 600 }}
             />
           </Stack>
+
+          <Dialog open={topupDialogOpen} onClose={handleCloseTopupDialog} fullWidth maxWidth="sm">
+            <DialogTitle>Ricarica saldo</DialogTitle>
+            <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              {!resolvedTopupAccount ? (
+                <Alert severity="warning" variant="outlined">
+                  Non esistono conti da ricaricare.
+                </Alert>
+              ) : (
+                <>
+                  <Box
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      bgcolor: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      {resolvedTopupAccount.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Saldo attuale: {formatCurrency(resolvedTopupAccount.balance, resolvedTopupAccount.currency)}
+                    </Typography>
+                  </Box>
+
+                  <TextField
+                    label="Numero carta (16 cifre)"
+                    size="small"
+                    value={cardNumber}
+                    onChange={(event) => {
+                      const digitsOnly = event.target.value.replace(/\D/g, '')
+                      setCardNumber(digitsOnly.slice(0, 16))
+                    }}
+                    placeholder="0000000000000000"
+                    inputProps={{ inputMode: 'numeric', maxLength: 16 }}
+                  />
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <TextField
+                      label="Scadenza (MM/YYYY)"
+                      size="small"
+                      value={cardExpiry}
+                      onChange={(event) => {
+                        const raw = event.target.value.replace(/[^\d]/g, '')
+                        const sliced = raw.slice(0, 6)
+                        const formatted = sliced.length <= 2 ? sliced : `${sliced.slice(0, 2)}/${sliced.slice(2, 6)}`
+                        setCardExpiry(formatted)
+                      }}
+                      placeholder="08/2027"
+                      inputProps={{ maxLength: 7 }}
+                    />
+                    <TextField
+                      label="CVV"
+                      size="small"
+                      value={cardCvv}
+                      onChange={(event) => {
+                        const digits = event.target.value.replace(/\D/g, '').slice(0, 3)
+                        setCardCvv(digits)
+                      }}
+                      inputProps={{ maxLength: 3, inputMode: 'numeric' }}
+                    />
+                  </Stack>
+                  <TextField
+                    label="Importo"
+                    type="number"
+                    size="small"
+                    value={topupAmount}
+                    onChange={(event) => setTopupAmount(event.target.value)}
+                    inputProps={{ min: 0, step: '0.01' }}
+                  />
+
+                  {topupError ? (
+                    <Alert severity="error" variant="outlined">
+                      {topupError}
+                    </Alert>
+                  ) : null}
+                  <Alert severity="info" variant="outlined">
+                    La ricarica è simulata e non genera alcun addebito reale.
+                  </Alert>
+                </>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={handleCloseTopupDialog} disabled={topupMutation.isPending}>
+                Annulla
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleConfirmTopup}
+                disabled={topupMutation.isPending || !resolvedTopupAccount}
+              >
+                {topupMutation.isPending ? 'In corso...' : 'Ricarica'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog open={withdrawDialogOpen} onClose={handleCloseWithdrawDialog} fullWidth maxWidth="sm">
+            <DialogTitle>Richiedi prelievo</DialogTitle>
+            <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              {!resolvedWithdrawAccount ? (
+                <Alert severity="warning" variant="outlined">
+                  Non sono presenti conti collegati.
+                </Alert>
+              ) : withdrawalMethods.length === 0 ? (
+                <Stack spacing={2}>
+                  <Alert severity="warning" variant="outlined">
+                    Registra prima un metodo di prelievo dalla pagina Profilo per poter inviare una richiesta.
+                  </Alert>
+                  <Button
+                    component={RouterLink}
+                    to={appConfig.routes.profile}
+                    variant="outlined"
+                    color="secondary"
+                  >
+                    Vai alla pagina Profilo
+                  </Button>
+                </Stack>
+              ) : (
+                <>
+                  <Box
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      bgcolor: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      {resolvedWithdrawAccount.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Saldo disponibile: {formatCurrency(resolvedWithdrawAccount.balance, resolvedWithdrawAccount.currency)}
+                    </Typography>
+                  </Box>
+                  <TextField
+                    select
+                    label="Metodo di prelievo"
+                    size="small"
+                    value={resolvedWithdrawMethod?.id ?? ''}
+                    onChange={(event) => setWithdrawMethodId(event.target.value)}
+                  >
+                    {withdrawalMethods.map((method) => (
+                      <MenuItem key={method.id} value={method.id}>
+                        {method.accountHolderName} · IBAN ****{method.iban.slice(-4)}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    label="Importo"
+                    type="number"
+                    size="small"
+                    value={withdrawAmount}
+                    onChange={(event) => setWithdrawAmount(event.target.value)}
+                    inputProps={{ min: 0, step: '0.01' }}
+                  />
+                  {withdrawError ? (
+                    <Alert severity="error" variant="outlined">
+                      {withdrawError}
+                    </Alert>
+                  ) : null}
+                  <Alert severity="info" variant="outlined">
+                    Il prelievo viene simulato e lo stato passa a <strong>PENDING</strong> fino al completamento.
+                  </Alert>
+                </>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={handleCloseWithdrawDialog} disabled={withdrawalMutation.isPending}>
+                Annulla
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={handleConfirmWithdraw}
+                disabled={withdrawalMutation.isPending || !resolvedWithdrawAccount || !withdrawalMethods.length}
+              >
+                {withdrawalMutation.isPending ? 'Invio...' : 'Conferma'}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Stack>
       </Container>
     </Box>
   )
+}
+
+const withdrawalStatusLabelMap: Record<string, string> = {
+  PENDING: 'In attesa',
+  COMPLETED: 'Completato',
+  FAILED: 'Fallito',
+}
+
+const getWithdrawalStatusLabel = (status?: string | null) => {
+  if (!status) {
+    return 'Sconosciuto'
+  }
+  return withdrawalStatusLabelMap[status] ?? status
+}
+
+const getWithdrawalStatusColor = (status?: string | null): 'warning' | 'success' | 'error' | 'default' => {
+  switch (status) {
+    case 'COMPLETED':
+      return 'success'
+    case 'FAILED':
+      return 'error'
+    case 'PENDING':
+      return 'warning'
+    default:
+      return 'default'
+  }
 }
 
 

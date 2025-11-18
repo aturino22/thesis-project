@@ -24,6 +24,14 @@ type AccountTopUpApiResponse = {
   created_at: string
 }
 
+export type AccountTopupRecord = {
+  id: string
+  accountId: string
+  amount: number
+  currency: string
+  createdAt: string
+}
+
 export type Transaction = {
   id: string
   accountId: string
@@ -32,6 +40,19 @@ export type Transaction = {
   category: string | null
   direction: 'buy' | 'sell'
   createdAt: string
+}
+
+export type Withdrawal = {
+  id: string
+  accountId: string
+  methodId: string
+  amount: number
+  fee: number
+  totalDebit: number
+  currency: string
+  status: string
+  requestedAt: string
+  reference: string
 }
 
 export type CryptoPosition = {
@@ -73,6 +94,29 @@ type AccountListResponse = {
     name: string
     created_at: string
   }>
+}
+
+type AccountTopupApiRecord = {
+  id: string
+  user_id: string
+  account_id: string
+  amount: string
+  currency: string
+  created_at: string
+}
+
+type WithdrawalApiRecord = {
+  id: string
+  user_id: string
+  method_id: string
+  account_id: string
+  amount: string
+  fee: string
+  currency: string
+  total_debit: string
+  status: string
+  requested_at: string
+  reference: string
 }
 
 type TransactionListResponse = {
@@ -175,6 +219,8 @@ type MarketAssetDetailApiResponse = {
 
 export const accountsKey = ['accounts']
 export const withdrawalMethodsKey = ['withdrawal-methods']
+export const accountTopupsKey = ['account-topups']
+export const withdrawalsKey = ['withdrawals']
 export const transactionsKey = ['transactions']
 export const cryptoPositionsKey = ['crypto-positions']
 
@@ -261,6 +307,34 @@ export function useAccountTopUpMutation() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountsKey })
+      void queryClient.invalidateQueries({ queryKey: accountTopupsKey })
+    },
+  })
+}
+
+export function useAccountTopupsQuery(
+  options?: Partial<UseQueryOptions<AccountTopupRecord[], Error>> & { enabled?: boolean },
+) {
+  const apiClient = useApiClient()
+  const { enabled = true, ...queryOptions } = options ?? {}
+
+  return useQuery<AccountTopupRecord[], Error>({
+    queryKey: accountTopupsKey,
+    enabled,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    ...queryOptions,
+    queryFn: async () => {
+      const response = await apiClient.request<AccountTopupApiRecord[]>({
+        path: '/accounts/topups',
+      })
+      return response.map((record) => ({
+        id: record.id,
+        accountId: record.account_id,
+        amount: parseCurrencyAmount(record.amount),
+        currency: record.currency,
+        createdAt: record.created_at,
+      }))
     },
   })
 }
@@ -346,6 +420,68 @@ export function useDeleteWithdrawalMethodMutation() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: withdrawalMethodsKey })
+    },
+  })
+}
+
+type WithdrawalPayload = {
+  accountId: string
+  methodId: string
+  amount: number
+  currency: string
+}
+
+export function useWithdrawalMutation() {
+  const apiClient = useApiClient()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: WithdrawalPayload) => {
+      await apiClient.request({
+        path: '/payouts/withdrawals',
+        method: 'POST',
+        body: {
+          account_id: payload.accountId,
+          method_id: payload.methodId,
+          amount: payload.amount,
+          currency: payload.currency,
+        },
+      })
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: withdrawalsKey })
+      void queryClient.invalidateQueries({ queryKey: accountsKey })
+    },
+  })
+}
+
+export function useWithdrawalsQuery(
+  options?: Partial<UseQueryOptions<Withdrawal[], Error>> & { enabled?: boolean },
+) {
+  const apiClient = useApiClient()
+  const { enabled = true, ...queryOptions } = options ?? {}
+
+  return useQuery<Withdrawal[], Error>({
+    queryKey: withdrawalsKey,
+    enabled,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    ...queryOptions,
+    queryFn: async () => {
+      const response = await apiClient.request<WithdrawalApiRecord[]>({
+        path: '/payouts/withdrawals',
+      })
+      return response.map((record) => ({
+        id: record.id,
+        accountId: record.account_id,
+        methodId: record.method_id,
+        amount: parseCurrencyAmount(record.amount),
+        fee: parseCurrencyAmount(record.fee),
+        totalDebit: parseCurrencyAmount(record.total_debit),
+        currency: record.currency,
+        status: record.status,
+        requestedAt: record.requested_at,
+        reference: record.reference,
+      }))
     },
   })
 }
