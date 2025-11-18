@@ -14,6 +14,7 @@ from psycopg.errors import ForeignKeyViolation, UniqueViolation
 
 from ..dependencies import AuthenticatedUser, require_scope
 from ..db import get_connection_with_rls
+from ..mfa import require_recent_mfa
 from ..schemas import (
     WithdrawalMethodCreate,
     WithdrawalMethodOut,
@@ -90,6 +91,7 @@ async def _ensure_account_balance_row(conn: AsyncConnection, account_id: str, ba
 async def create_withdrawal_method(
     payload: WithdrawalMethodCreate,
     user: AuthenticatedUser = Depends(require_scope("payouts:write")),
+    _: AuthenticatedUser = Depends(require_recent_mfa()),
     conn: AsyncConnection = Depends(get_connection_with_rls),
 ) -> WithdrawalMethodOut:
     normalized_iban = _normalize_iban(payload.iban)
@@ -211,6 +213,7 @@ async def create_withdrawal(
     payload: WithdrawalRequest,
     request: Request,
     user: AuthenticatedUser = Depends(require_scope("payouts:write")),
+    _: AuthenticatedUser = Depends(require_recent_mfa()),
     conn: AsyncConnection = Depends(get_connection_with_rls),
 ) -> WithdrawalOut:
     try:
