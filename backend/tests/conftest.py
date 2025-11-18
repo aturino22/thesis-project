@@ -201,3 +201,18 @@ def cleanup_otp_audits(sync_connection: psycopg.Connection) -> Iterator[None]:
         cur.execute("SELECT set_config('app.current_user_id', %s, true);", (DEFAULT_TEST_USER_ID,))
         cur.execute("DELETE FROM otp_audits;")
         sync_connection.commit()
+
+
+@pytest.fixture()
+def cleanup_otp_state(sync_connection: psycopg.Connection) -> Iterator[None]:
+    """Ripulisce le sfide OTP e le sessioni MFA create durante i test."""
+
+    with sync_connection.cursor() as cur:
+        cur.execute("DELETE FROM user_mfa_sessions;")
+        cur.execute("DELETE FROM otp_challenges;")
+        sync_connection.commit()
+    yield
+    with sync_connection.cursor() as cur:
+        cur.execute("DELETE FROM user_mfa_sessions;")
+        cur.execute("DELETE FROM otp_challenges;")
+        sync_connection.commit()
