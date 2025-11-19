@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import Any
 
 from psycopg import conninfo
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -49,8 +50,14 @@ class Settings(BaseSettings):
     keycloak_admin_client_id: str | None = None
     keycloak_admin_client_secret: str | None = None
     keycloak_public_client_id: str = "frontend"
-    keycloak_admin_username: str | None = None
-    keycloak_admin_password: str | None = None
+    keycloak_admin_username: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("KEYCLOAK_ADMIN_USERNAME", "KC_ADMIN_USER"),
+    )
+    keycloak_admin_password: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("KEYCLOAK_ADMIN_PASSWORD", "KC_ADMIN_PASSWORD"),
+    )
     keycloak_admin_token_client_id: str = "admin-cli"
     keycloak_admin_token_realm: str | None = None
 

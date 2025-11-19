@@ -26,7 +26,8 @@ class KeycloakAdminClient:
     """Wrapper minimale per le operazioni amministrative richieste dal profilo utente."""
 
     def __init__(self, settings: Settings, *, timeout: float = 10.0) -> None:
-        if not settings.keycloak_admin_client_id:
+        client_id = settings.keycloak_admin_client_id or settings.keycloak_public_client_id
+        if not client_id:
             msg = "Configurazione Keycloak admin incompleta."
             raise KeycloakAdminError(msg)
 
@@ -34,12 +35,14 @@ class KeycloakAdminClient:
         base = settings.keycloak_base_url.rstrip("/")
         self._token_endpoint = f"{base}/realms/{self._realm}/protocol/openid-connect/token"
         self._admin_base_url = f"{base}/admin/realms/{self._realm}"
-        self._client_id = settings.keycloak_admin_client_id
+        self._client_id = client_id
         self._client_secret = settings.keycloak_admin_client_secret
         self._admin_username = settings.keycloak_admin_username
         self._admin_password = settings.keycloak_admin_password
         self._admin_token_client_id = settings.keycloak_admin_token_client_id or "admin-cli"
-        admin_realm = settings.keycloak_admin_token_realm or self._realm
+        admin_realm = settings.keycloak_admin_token_realm
+        if not admin_realm:
+            admin_realm = "master" if self._admin_username else self._realm
         self._admin_token_endpoint = f"{base}/realms/{admin_realm}/protocol/openid-connect/token"
         self._timeout = timeout
 
