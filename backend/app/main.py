@@ -10,6 +10,7 @@ from .config import Settings, get_settings
 from .db import lifespan_pool
 from .routes import (
     accounts_router,
+    auth_router,
     crypto_positions_router,
     market_router,
     otp_router,
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
             "environment": settings.environment,
         }
 
+    app.include_router(auth_router)
     app.include_router(accounts_router)
     app.include_router(crypto_positions_router)
     app.include_router(market_router)
