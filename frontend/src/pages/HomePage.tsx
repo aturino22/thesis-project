@@ -341,10 +341,22 @@ export function HomePage() {
       setTopupError('Inserisci la scadenza nel formato MM/YYYY.')
       return
     }
-    const [expMonth] = cardExpiry.split('/')
+    const [expMonth, expYear] = cardExpiry.split('/')
     const monthNumber = Number(expMonth)
+    const yearNumber = Number(expYear)
     if (monthNumber < 1 || monthNumber > 12) {
       setTopupError('Il mese di scadenza deve essere compreso tra 01 e 12.')
+      return
+    }
+    
+    // Controllo se la carta è scaduta
+    // Le carte scadono alla fine del mese indicato, quindi una carta 11/2025 è scaduta da 01/12/2025
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth() + 1 // getMonth() returns 0-11
+    
+    if (yearNumber < currentYear || (yearNumber === currentYear && monthNumber <= currentMonth)) {
+      setTopupError('La carta inserita è scaduta. Utilizza una carta valida.')
       return
     }
     if (!/^\d{3}$/.test(cardCvv)) {
