@@ -40,6 +40,8 @@ export function ColorVisionThemeProvider({ children }: { children: ReactNode }) 
   )
 }
 
+// Il hook viene esportato insieme al provider, disabilitiamo la regola di fast refresh per questo file.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useColorVisionMode() {
   const context = useContext(ColorVisionContext)
   if (!context) {

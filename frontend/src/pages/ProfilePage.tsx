@@ -747,12 +747,12 @@ export function ProfilePage() {
                       withdrawalMethodsQuery.data.map((method) => (
                         <Box
                           key={method.id}
-                          sx={{
-                            border: '1px solid rgba(255,255,255,0.08)',
+                          sx={(theme) => ({
+                            border: `1px solid ${theme.palette.divider}`,
                             borderRadius: 2,
                             p: 1.5,
-                            bgcolor: 'action.hover',
-                          }}
+                            bgcolor: theme.palette.action.hover,
+                          })}
                         >
                           <Stack direction="row" justifyContent="space-between" alignItems="center">
                             <Stack spacing={0.25}>

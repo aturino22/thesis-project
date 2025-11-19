@@ -19,7 +19,7 @@ const palette: Record<ColorVisionMode, PaletteOptions> = {
     secondary: { main: '#56B4E9' },
     success: { main: '#009E73' },
     warning: { main: '#E69F00' },
-    error: { main: '#D55E00' },
+    error: { main: '#C62828', light: '#EF5350', dark: '#8E0000', contrastText: '#FFFFFF' },
     info: { main: '#56B4E9' },
     background: { default: '#FFFFFF', paper: '#F6F6F6' },
     text: { primary: '#000000', secondary: '#666666' },
@@ -27,95 +27,99 @@ const palette: Record<ColorVisionMode, PaletteOptions> = {
   },
 }
 
-const themeOptions = (mode: ColorVisionMode): CssVarsThemeOptions => ({
-  defaultColorScheme: 'dark',
-  colorSchemes: {
-    dark: {
-      palette: palette[mode],
+const themeOptions = (mode: ColorVisionMode): CssVarsThemeOptions => {
+  const colorScheme = mode === 'daltonic' ? 'light' : 'dark'
+
+  return {
+    defaultColorScheme: colorScheme,
+    colorSchemes: {
+      [colorScheme]: {
+        palette: palette[mode],
+      },
+    } as CssVarsThemeOptions['colorSchemes'],
+    shape: {
+      borderRadius: 20,
     },
-  },
-  shape: {
-    borderRadius: 20,
-  },
-  typography: {
-    fontFamily: "'Inter', 'Montserrat', 'Segoe UI', sans-serif",
-    h3: {
-      fontWeight: 700,
-      letterSpacing: '-0.01em',
+    typography: {
+      fontFamily: "'Inter', 'Montserrat', 'Segoe UI', sans-serif",
+      h3: {
+        fontWeight: 700,
+        letterSpacing: '-0.01em',
+      },
+      h5: {
+        fontWeight: 600,
+      },
+      subtitle1: {
+        fontWeight: 600,
+      },
+      button: {
+        fontWeight: 600,
+        textTransform: 'none',
+      },
     },
-    h5: {
-      fontWeight: 600,
-    },
-    subtitle1: {
-      fontWeight: 600,
-    },
-    button: {
-      fontWeight: 600,
-      textTransform: 'none',
-    },
-  },
-  components: {
-    MuiCssBaseline: {
-      styleOverrides: {
-        body: {
-          backgroundColor: palette[mode].background?.default,
-          color: palette[mode].text?.primary,
+    components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          body: {
+            backgroundColor: palette[mode].background?.default,
+            color: palette[mode].text?.primary,
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            borderRadius: 24,
+            border: `1px solid ${palette[mode].divider ?? 'rgba(0,0,0,0.08)'}`,
+            backgroundColor: palette[mode].background?.paper,
+            color: palette[mode].text?.primary,
+            boxShadow: '0 10px 35px rgba(0, 0, 0, 0.5)',
+          },
+        },
+        defaultProps: {
+          elevation: 0,
+          variant: 'outlined',
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            borderRadius: 999,
+            fontWeight: 600,
+          },
+        },
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: 999,
+            paddingLeft: 20,
+            paddingRight: 20,
+          },
+        },
+      },
+      MuiContainer: {
+        defaultProps: {
+          maxWidth: 'lg',
+        },
+      },
+      MuiListItemIcon: {
+        styleOverrides: {
+          root: {
+            minWidth: 40,
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          notchedOutline: {
+            borderColor: mode === 'daltonic' ? '#000000' : undefined,
+          },
         },
       },
     },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: 24,
-          border: `1px solid ${palette[mode].divider ?? 'rgba(0,0,0,0.08)'}`,
-          backgroundColor: palette[mode].background?.paper,
-          color: palette[mode].text?.primary,
-          boxShadow: '0 10px 35px rgba(0, 0, 0, 0.5)',
-        },
-      },
-      defaultProps: {
-        elevation: 0,
-        variant: 'outlined',
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          borderRadius: 999,
-          fontWeight: 600,
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 999,
-          paddingLeft: 20,
-          paddingRight: 20,
-        },
-      },
-    },
-    MuiContainer: {
-      defaultProps: {
-        maxWidth: 'lg',
-      },
-    },
-    MuiListItemIcon: {
-      styleOverrides: {
-        root: {
-          minWidth: 40,
-        },
-      },
-    },
-    MuiOutlinedInput: {
-      styleOverrides: {
-        notchedOutline: {
-          borderColor: mode === 'daltonic' ? '#000000' : undefined,
-        },
-      },
-    },
-  },
-})
+  }
+}
 
 export const createAppTheme = (mode: ColorVisionMode = 'default') => extendTheme(themeOptions(mode))
 

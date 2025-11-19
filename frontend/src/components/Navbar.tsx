@@ -204,7 +204,7 @@ export function Navbar() {
             <FaTimes />
           </IconButton>
         </Box>
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+        <Divider sx={{ borderColor: 'divider' }} />
         <List>
           {navItems.map((item) => (
             <ListItem key={item.type === 'link' ? item.path : item.label} disablePadding>
@@ -246,6 +246,5 @@ export function Navbar() {
     </AppBar>
   )
 }
-
 
 

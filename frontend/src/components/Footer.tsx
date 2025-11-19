@@ -13,7 +13,7 @@ export function Footer() {
       }}
     >
       <Container maxWidth="lg">
-        <Divider sx={{ mb: 3, borderColor: 'rgba(255,255,255,0.08)' }} />
+        <Divider sx={{ mb: 3, borderColor: 'divider' }} />
         <Typography
           variant="body2"
           align="center"
