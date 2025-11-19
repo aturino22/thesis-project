@@ -3,8 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   Container,
   Dialog,
@@ -18,7 +16,7 @@ import Grid from '@mui/material/GridLegacy'
 import { FaRocket, FaSignInAlt } from 'react-icons/fa'
 import { appConfig } from '@/config/appConfig'
 
-const experienceTags = ['Bonifici in tempo reale', 'Carte virtuali tokenizzate', 'Investimenti globali']
+const experienceTags = ['Trading crypto in tempo reale', 'Ricariche e prelievi istantanei', 'Quotazioni live']
 const DISCLAIMER_MESSAGE =
   'Il portafoglio che stai utilizzando è nato come progetto universitario a fini didattici. Tutte le operazioni mostrate sono simulate: acquisti, vendite e transazioni non generano movimenti di denaro reale né effetti finanziari.'
 
@@ -32,28 +30,28 @@ type ShowcaseHighlight = {
 
 const showcaseHighlights: ShowcaseHighlight[] = [
   {
-    title: 'Portafoglio multi-valuta',
+    title: 'Portafoglio Crypto',
     description:
-      "Gestisci conti internazionali, limiti personalizzati e notifiche istantanee in tempo reale da un'unica dashboard.",
-    image: 'https://images.unsplash.com/photo-1518186285589-2f7649de83e0?auto=format&fit=crop&w=1000&q=80',
-    alt: 'Anteprima mobile di un portafoglio digitale',
+      'Acquista e vendi criptovalute in pochi click con un sistema di trading intuitivo e sicuro. Monitora le tue posizioni con valutazione in tempo reale basata su quotazioni live da CoinCap API. Gestisci il tuo portfolio crypto direttamente dalla dashboard con visualizzazione aggregata per ticker, calcolo automatico del valore in EUR e storico completo delle operazioni. Ogni ordine di acquisto o vendita aggiorna atomicamente sia il saldo del conto che la quantità detenuta, garantendo consistenza dei dati.',
+    image: 'https://images.unsplash.com/photo-1621761191319-c6fb62004040?auto=format&fit=crop&w=1200&q=80',
+    alt: 'Dashboard crypto con grafici di trading',
     accent: '#1ED760',
   },
   {
-    title: 'Trading e risparmio smart',
+    title: 'Ricariche e Prelievi',
     description:
-      'Apri posizioni, automatizza piani di accumulo e monitora performance live con grafici dinamici e alert push.',
-    image: 'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=1000&q=80',
-    alt: 'Dashboard di trading con grafici luminosi',
-    accent: '#F1C40F',
+      'Ricarica il tuo conto in modo istantaneo con simulazione di pagamento tramite carta. Richiedi prelievi bancari sicuri verso IBAN verificati con sistema di frozen funds che blocca temporaneamente i fondi durante l\'elaborazione. Tutte le operazioni sono tracciate con audit trail completo che registra IP, User-Agent e timestamp. I prelievi richiedono autenticazione a due fattori (MFA) per garantire Strong Customer Authentication conforme a PSD2. Il sistema calcola automaticamente le fee (1% con minimo €2) e genera reference univoci per ogni operazione.',
+    image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=1200&q=80',
+    alt: 'Operazioni bancarie sicure',
+    accent: '#7C4DFF',
   },
   {
-    title: 'Pagamenti premium',
+    title: 'Quotazioni Real-Time',
     description:
-      'Crea carte virtuali temporanee, connetti wallet mobile e approva pagamenti con controlli biometrici.',
-    image: 'https://images.unsplash.com/photo-1488998527040-85054a85150e?auto=format&fit=crop&w=1000&q=80',
-    alt: 'Utente che paga con smartphone contactless',
-    accent: '#0B0B0B',
+      'Visualizza i prezzi aggiornati degli asset crypto con variazioni percentuali 24h, capitalizzazione di mercato e volume di scambio. I dati provengono in tempo reale da CoinCap API v2, garantendo informazioni accurate per decisioni di trading informate. La dashboard market mostra una lista completa di asset disponibili con prezzi live, permettendo di esplorare opportunità di investimento. Ogni asset ha una pagina di dettaglio con storico prezzi e informazioni complete per analisi approfondite prima dell\'acquisto.',
+    image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80',
+    alt: 'Grafici di mercato in tempo reale',
+    accent: '#F1C40F',
   },
 ]
 
@@ -142,12 +140,11 @@ export function PublicHomePage({
                   color: 'rgba(255, 255, 255, 0.85)',
                 }}
               >
-                Piattaforma di digital banking che ti permette di{' '}
+                Wallet digitale che ti permette di{' '}
                 <Box component="span" sx={{ color: '#1ED760', fontWeight: 700 }}>
-                  muovere capitali, investire e pagare
+                  gestire conti, tradare crypto e monitorare il mercato
                 </Box>{' '}
-                con una sola app: controlli biometrici, alert istantanei e gestione multi-valuta pensata per utenti
-                premium e team finance distributed.
+                in tempo reale. Ricariche istantanee, prelievi sicuri con MFA e quotazioni live per decisioni di investimento informate.
               </Typography>
             </Stack>
 
@@ -166,7 +163,7 @@ export function PublicHomePage({
                   '&:hover': { backgroundColor: '#00b84d' },
                 }}
               >
-                Accedi con Keycloak
+                Accedi
               </Button>
               {showMockedAuthChip ? (
                 <Chip label="Mocked auth attiva" color="warning" variant="outlined" size="small" sx={{ fontWeight: 600 }} />
@@ -206,11 +203,10 @@ export function PublicHomePage({
                 Esperienza pubblica
               </Typography>
               <Typography variant="h4" component="h2" sx={{ maxWidth: 720, fontWeight: 700 }}>
-                Tutto cio che ti serve per muovere e far crescere il capitale digitale
+                Tutto ciò che ti serve per gestire crypto e conti digitali
               </Typography>
               <Typography variant="body1" sx={{ maxWidth: 720, color: 'rgba(255,255,255,0.85)' }}>
-                Pianifica spese, investi in tempo reale e proteggi le tue carte con controlli biometrici e AI antifrode. La
-                piattaforma combina operativita banking, trading e cash management in un ambiente ultra reattivo e sicuro.
+                Acquista e vendi criptovalute con quotazioni real-time, ricarica il tuo conto istantaneamente e richiedi prelievi bancari protetti da autenticazione a due fattori. La piattaforma combina trading crypto, gestione conti multi-valuta e operazioni bancarie in un ambiente sicuro e intuitivo.
               </Typography>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
                 {experienceTags.map((tag) => (
@@ -230,79 +226,134 @@ export function PublicHomePage({
             </Stack>
           </Box>
 
-          <Grid container spacing={3}>
-            {showcaseHighlights.map((feature) => {
+          <Stack spacing={4}>
+            {showcaseHighlights.map((feature, index) => {
+              const isEven = index % 2 === 0
               const accentForeground = feature.accent === '#0B0B0B' ? '#F1C40F' : '#041704'
+              
               return (
-                <Grid key={feature.title} item xs={12} md={4}>
-                  <Card
+                <Box
+                  key={feature.title}
+                  sx={{
+                    borderRadius: 5,
+                    background: `linear-gradient(135deg, #020202 0%, ${feature.accent}15 100%)`,
+                    color: '#F4FFE3',
+                    overflow: 'hidden',
+                    position: 'relative',
+                  }}
+                >
+                  <Box
                     sx={{
-                      height: '100%',
-                      borderRadius: 4,
-                      color: 'text.primary',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      overflow: 'hidden',
-                      backgroundColor: 'background.paper',
+                      position: 'absolute',
+                      width: 300,
+                      height: 300,
+                      background: `radial-gradient(circle, ${feature.accent}40 0%, transparent 70%)`,
+                      top: -100,
+                      [isEven ? 'right' : 'left']: -100,
+                      display: { xs: 'none', md: 'block' },
                     }}
-                  >
-                    <Box sx={{ position: 'relative', height: 220, overflow: 'hidden' }}>
+                  />
+                  
+                  <Grid container spacing={0}>
+                    <Grid 
+                      item 
+                      xs={12} 
+                      md={6} 
+                      order={{ xs: 1, md: isEven ? 1 : 2 }}
+                    >
                       <Box
-                        component="img"
-                        src={feature.image}
-                        alt={feature.alt}
-                        loading="lazy"
                         sx={{
-                          width: '100%',
+                          position: 'relative',
+                          height: { xs: 280, md: 400 },
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={feature.image}
+                          alt={feature.alt}
+                          loading="lazy"
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            filter: 'saturate(1.1) brightness(0.9)',
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%)',
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            bottom: 20,
+                            [isEven ? 'right' : 'left']: 20,
+                            width: 60,
+                            height: 60,
+                            borderRadius: '50%',
+                            backgroundColor: feature.accent,
+                            boxShadow: `0 0 40px ${feature.accent}`,
+                            border: '3px solid rgba(255,255,255,0.2)',
+                            display: { xs: 'none', md: 'block' },
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                    
+                    <Grid 
+                      item 
+                      xs={12} 
+                      md={6} 
+                      order={{ xs: 2, md: isEven ? 2 : 1 }}
+                    >
+                      <Stack
+                        spacing={3}
+                        sx={{
+                          p: { xs: 3, md: 5 },
                           height: '100%',
-                          objectFit: 'cover',
-                          filter: 'saturate(1.1)',
+                          justifyContent: 'center',
+                          position: 'relative',
+                          textAlign: { xs: 'left', md: isEven ? 'left' : 'right' },
                         }}
-                      />
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          inset: 0,
-                          background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.75) 100%)',
-                        }}
-                      />
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 16,
-                          right: 16,
-                          width: 48,
-                          height: 48,
-                          borderRadius: '50%',
-                          backgroundColor: feature.accent,
-                          boxShadow: `0 0 32px ${feature.accent}`,
-                          border: '2px solid rgba(255,255,255,0.15)',
-                        }}
-                      />
-                    </Box>
-                    <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      <Chip
-                        label={feature.title}
-                        sx={{
-                          alignSelf: 'flex-start',
-                          fontWeight: 700,
-                          backgroundColor: feature.accent,
-                          color: accentForeground,
-                          borderRadius: 999,
-                        }}
-                      />
-                      <Typography variant="body1" fontWeight={600}>
-                        {feature.title}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)' }}>
-                        {feature.description}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                      >
+                        <Chip
+                          label={feature.title}
+                          sx={{
+                            alignSelf: { xs: 'flex-start', md: isEven ? 'flex-start' : 'flex-end' },
+                            fontWeight: 700,
+                            backgroundColor: feature.accent,
+                            color: accentForeground,
+                            borderRadius: 999,
+                            px: 2.5,
+                            py: 0.5,
+                            fontSize: '0.95rem',
+                          }}
+                        />
+                        
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            color: 'rgba(255,255,255,0.85)', 
+                            lineHeight: 1.7,
+                            maxWidth: { xs: '100%', md: '90%' },
+                            mx: { xs: 0, md: isEven ? 0 : 'auto' },
+                            mr: { xs: 0, md: isEven ? 0 : 0 },
+                            ml: { xs: 0, md: isEven ? 0 : 'auto' },
+                          }}
+                        >
+                          {feature.description}
+                        </Typography>
+                      </Stack>
+                    </Grid>
+                  </Grid>
+                </Box>
               )
             })}
-          </Grid>
+          </Stack>
         </Stack>
       </Container>
     </Box>
